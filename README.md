@@ -2,6 +2,7 @@
 
 The idea is to test some functions I am implementing for count-min sketches, k-mer-based etc. 
 
+*Amburana* is a genus of endangered South American trees which are used in the confection of cachaça casks.
 ## License 
 Copyright (C) 2019-today  [Leonardo de Oliveira Martins](https://github.com/leomrtns)
 

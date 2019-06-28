@@ -99,7 +99,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = $(top_builddir)/lib/config.h
+CONFIG_HEADER = $(top_builddir)/src/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__EXEEXT_1 = check_unit$(EXEEXT)
@@ -107,7 +107,7 @@ am_check_unit_OBJECTS = check_unit.$(OBJEXT)
 check_unit_OBJECTS = $(am_check_unit_OBJECTS)
 check_unit_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-check_unit_DEPENDENCIES = ../lib/libsuper_distance.la \
+check_unit_DEPENDENCIES = ../src/amburana.la \
 	../biomcmc-lib/lib/libbiomcmc.la $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -125,7 +125,7 @@ AM_V_at = $(am__v_at_@AM_V@)
 am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 am__v_at_1 = 
-DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/lib
+DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
@@ -382,7 +382,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp \
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
-AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@
+AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@  @CHECK_CFLAGS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_LDFLAGS = @AM_LDFLAGS@
 AR = @AR@
@@ -510,8 +510,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../lib -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
-LDADD = $(GTKDEPS_LIBS) ../lib/libsuper_distance.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
+AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../src -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@ -DTEST_FILE_DIR='"$(srcdir)/files/"'
+LDADD = $(GTKDEPS_LIBS)  @CHECK_LIBS@ ../src/amburana.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
+EXTRA_DIST = files # directory with fasta etc files (accessed with #define TEST_FILE_DIR above)
 LIST_OF_TEST_PROGS = check_unit
 check_unit_SOURCES = check_unit.c
 all: all-am

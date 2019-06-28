@@ -73,7 +73,7 @@ dnl better solution is to allow arbitrary location for biomcmc-lib (it relies on
 AC_CHECK_FILE([${srcdir}/biomcmc-lib],[],[ln -s submodules/biomcmc-lib ${srcdir}/biomcmc-lib])
 AC_CHECK_FILE([${srcdir}/biomcmc-lib/configure.ac],[], [AC_MSG_ERROR(["biomcmc-lib submodule missing, please git clone --recursive or link by hand to location of source code"])])
 # Call biomcmc-lib ./configure script recursively.
-AC_CONFIG_SUBDIRS([biomcmc-lib])
+AC_CONFIG_SUBDIRS([biomcmc-lib, submodules/parasail])
 AC_SUBST([BIOMCMCLIB], [biomcmc-lib])
 AC_OUTPUT
 
