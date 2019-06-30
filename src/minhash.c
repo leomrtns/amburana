@@ -59,15 +59,14 @@ new_minhash_from_dna (char *dna, int dna_length, int sketch_size)
 void
 update_minhash_from_fixedhash (minhash mh, uint64_t hash_f, uint64_t hash_r)
 {
-  uint64_t outhash[2], small_h = 0UL;  
+  uint64_t small_h = 0UL;  
   if (hash_f < hash_r) small_h = hash_f;
   else small_h = hash_r;
 
-  biomcmc_murmurhash3 ((void*)small_h, 8, 137, (void*)outhash); 
   heap64_insert (mh->sketch[0], biomcmc_hashint64_1 (small_h));
   heap64_insert (mh->sketch[1], biomcmc_hashint64_2 (small_h));
-  heap64_insert (mh->sketch[2], outhash[0]);
-  heap64_insert (mh->sketch[3], outhash[1]);
+  heap64_insert (mh->sketch[2], biomcmc_hashint64_3 (small_h));
+  heap64_insert (mh->sketch[3], biomcmc_hashint64_seed (small_h, 6)); // 6 is murmurhash 
 }
 
 void
