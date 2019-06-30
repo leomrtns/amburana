@@ -97,7 +97,7 @@ void
 heap64_finalise_heap_qsort (heap64 h64)
 {
   h64->hash[0] = h64->hash[h64->n]; // heap goes from [1...n] and we want [0...n-1]
-  qsort (h64->hash, h64->n, sizeof (uint64_t), compare_uint64_increasing); 
+  qsort (h64->hash, h64->n, sizeof (uint64_t), compare_uint64_decreasing); // to be consistent with pop()
   h64->hash = (uint64_t*) biomcmc_realloc ((uint64_t*) h64->hash, h64->n * sizeof (uint64_t));
   h64->heap_size = h64->n;
 }

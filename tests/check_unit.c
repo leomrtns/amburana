@@ -1,4 +1,3 @@
-#include <amburana.h> 
 #include <check.h>
 
 #define TEST_SUCCESS 0

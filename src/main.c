@@ -1,9 +1,10 @@
-#include "simple_heap.h" 
+#include "minhash.h"
 
 typedef struct
 {
   struct arg_lit  *help;
   struct arg_lit  *version;
+  struct arg_file *spname;
   struct arg_end  *end;
   void **argtable;
 } arg_parameters;
@@ -18,9 +19,10 @@ get_parameters_from_argv (int argc, char **argv)
   arg_parameters params = {
     .help = arg_litn("h","help",0, 1, "print a longer help and exit"),
     .version = arg_litn("v","version",0, 1, "print version and exit"),
+    .spname = arg_file0("s","species", "<file name>", "file "),
     .end  = arg_end(10) // max number of errors it can store (o.w. shows "too many errors")
   };
-  void* argtable[] = {params.help, params.version, params.end};
+  void* argtable[] = {params.help, params.version, params.spname, params.end};
   params.argtable = argtable; 
   /* actual parsing: */
   if (arg_nullcheck(params.argtable)) biomcmc_error ("Problem allocating memory for the argtable (command line arguments) structure");
@@ -34,6 +36,7 @@ del_arg_parameters (arg_parameters params)
 {
   if (params.help) free (params.help);
   if (params.version) free (params.version);
+  if (params.spname) free (params.spname);
   if (params.end) free (params.end);
 }
 
@@ -62,48 +65,39 @@ print_usage (arg_parameters params, char *progname)
 int
 main (int argc, char **argv)
 {
-  int i,j, nreps = 400, heapsize=500000;
-  uint64_t rad;
-  double elapsed;
+  int i,j;
   clock_t time0, time1;
-  heap64 h64;
+  cm_sketch *cm;
+  minhash *mh;
+  double dist[8];
+  alignment aln;
 
-  biomcmc_random_number_init (0);
   arg_parameters params = get_parameters_from_argv (argc, argv);
 
-  time0 = clock (); elapsed = 0.;
-  for (i=0; i < nreps; i++) {
-    h64 = new_heap64 (heapsize);
-    for (j=0; j < heapsize+1; j++) {
-      rad = (uint64_t) biomcmc_rng_get_32(); 
-      heap64_insert (h64, rad);
-    }
-    heap64_finalise_heap_pop (h64);
-    time1 = clock (); 
-    if (!(i%50)) printf ("heap: %.8lf secs\n", (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); 
-    elapsed += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-    del_heap64(h64);
-  }
-  printf ("average heap : %lf secs\n", elapsed/(double)(nreps));
+  time0 = clock (); 
+  aln = read_alignment_from_file ((char*) params.spname->filename[0]);
+  time1 = clock (); printf ("  time to read alignment: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
+  cm = (cm_sketch*) biomcmc_malloc (aln->ntax * sizeof (cm_sketch));
+  mh = (minhash*) biomcmc_malloc (aln->ntax * sizeof (minhash));
 
-  time0 = clock (); elapsed = 0.;
-  for (i=0; i < nreps; i++) {
-    h64 = new_heap64 (heapsize);
-    for (j=0; j < heapsize+1; j++) {
-      rad = (uint64_t) biomcmc_rng_get_32(); 
-      heap64_insert (h64, rad);
-    }
-    heap64_finalise_heap_qsort (h64);
-    time1 = clock (); 
-    if (!(i%50)) printf ("qsort: %.8lf secs\n", (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); 
-    elapsed += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-    del_heap64(h64);
-  }
-  printf ("average heap : %lf secs\n", elapsed/(double)(nreps));
+  for (i=0; i < aln->ntax; i++) cm[i] = new_fixedhash_sketch_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
+  time1 = clock (); printf ("  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
+  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
+  time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  biomcmc_random_number_finalize ();
+  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_cm_sketches (cm[i], cm[j], dist);
+  time1 = clock (); printf ("  time to compare sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+
+  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_minhashes (mh[i], mh[j], dist);
+  time1 = clock (); printf ("  time to compare minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+
+  for (i= aln->ntax -1; i >- 0; i--) { del_cm_sketch (cm[i]); del_minhash (mh[i]); }
+  if (cm) free (cm);
+  if (mh) free (mh);
+  del_alignment (aln);
+
   del_arg_parameters (params);
   return EXIT_SUCCESS;
 }

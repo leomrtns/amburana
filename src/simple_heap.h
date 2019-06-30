@@ -1,9 +1,18 @@
-#ifndef SIMPLE_HEAP_H
-#define SIMPLE_HEAP_H
-#include <biomcmc.h>
+/* 
+ * This file is part of amburana. 
+ * Copyright (C) 2019-today  Leonardo de Oliveira Martins [ leomrtns at gmail.com;  http://www.leomartins.org ]
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more 
+ * details (file "COPYING" or http://www.gnu.org/copyleft/gpl.html).
+ */
 
-/* max heap structure for storing smallest hash values 
- * code inspired by https://gist.github.com/vgoel30/5d81e6abf9464930c1e126dab04d5be3  */
+/*! \file simple_heap.h 
+ *  \brief Max heap structure for storing smallest hash values 
+ * code inspired by https://gist.github.com/vgoel30/5d81e6abf9464930c1e126dab04d5be3  
+ */
+#ifndef _simple_heap_h_ 
+#define _simple_heap_h_ 
+#include <biomcmc.h>
 
 typedef struct heap64_struct* heap64;
 
