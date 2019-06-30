@@ -79,6 +79,7 @@ compare_minhashes (minhash mh1, minhash mh2, double *result)
     count = 0;
     h1 = mh1->sketch[i]->hash;    n1 = mh1->sketch[i]->n;
     h2 = mh2->sketch[i]->hash;    n2 = mh2->sketch[i]->n;
+
     for (j1 = j2 = 0; (j1 < n1) && (j2 < n2); ) { // both are in decreasing order
       if (h1[j1] > h2[j2]) j1++; 
       else if (h1[j1] < h2[j2]) j2++; 

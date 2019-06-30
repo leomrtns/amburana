@@ -1,4 +1,6 @@
-#include "minhash.h"
+#include "amburana.h" 
+#include "simple_heap.c"
+#include "minhash.c"
 
 typedef struct
 {
@@ -65,7 +67,7 @@ print_usage (arg_parameters params, char *progname)
 int
 main (int argc, char **argv)
 {
-  int i,j;
+  int i,j,k;
   clock_t time0, time1;
   cm_sketch *cm;
   minhash *mh;
@@ -81,17 +83,18 @@ main (int argc, char **argv)
   cm = (cm_sketch*) biomcmc_malloc (aln->ntax * sizeof (cm_sketch));
   mh = (minhash*) biomcmc_malloc (aln->ntax * sizeof (minhash));
 
-  for (i=0; i < aln->ntax; i++) cm[i] = new_fixedhash_sketch_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
+  for (i=0; i < aln->ntax; i++) cm[i] = new_fixedhash_sketch_from_dna (aln->character->string[i], aln->character->nchars[i], 128);
   time1 = clock (); printf ("  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-
-  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
+  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], 128);
   time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_cm_sketches (cm[i], cm[j], dist);
-  time1 = clock (); printf ("  time to compare sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-
-  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_minhashes (mh[i], mh[j], dist);
-  time1 = clock (); printf ("  time to compare minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
+    printf ("\n%38s %38s ", aln->taxlabel->string[j], aln->taxlabel->string[i]); 
+    compare_cm_sketches (cm[i], cm[j], dist);
+    for (k=0;k<8;k++) printf ("%8.6lf ", dist[k]);
+    compare_minhashes (mh[i], mh[j], dist);
+    for (k=0;k<4;k++) printf ("%8.6lf ", dist[k]);
+  }
 
   for (i= aln->ntax -1; i >- 0; i--) { del_cm_sketch (cm[i]); del_minhash (mh[i]); }
   if (cm) free (cm);

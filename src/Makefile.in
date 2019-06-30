@@ -14,6 +14,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -104,18 +105,22 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am__objects_1 = main.$(OBJEXT) simple_heap.$(OBJEXT) minhash.$(OBJEXT)
-am__objects_2 =
-am_amburana_OBJECTS = $(am__objects_1) $(am__objects_2)
+LTLIBRARIES = $(noinst_LTLIBRARIES)
+libamburana_la_LIBADD =
+am__objects_1 =
+am__objects_2 = simple_heap.lo minhash.lo
+am_libamburana_la_OBJECTS = $(am__objects_1) $(am__objects_2)
+libamburana_la_OBJECTS = $(am_libamburana_la_OBJECTS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
+am_amburana_OBJECTS = main.$(OBJEXT)
 amburana_OBJECTS = $(am_amburana_OBJECTS)
 amburana_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 amburana_DEPENDENCIES = ../biomcmc-lib/lib/libbiomcmc.la \
 	$(am__DEPENDENCIES_1)
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -131,8 +136,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/main.Po ./$(DEPDIR)/minhash.Po \
-	./$(DEPDIR)/simple_heap.Po
+am__depfiles_remade = ./$(DEPDIR)/main.Po ./$(DEPDIR)/minhash.Plo \
+	./$(DEPDIR)/simple_heap.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -152,8 +157,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(amburana_SOURCES)
-DIST_SOURCES = $(amburana_SOURCES)
+SOURCES = $(libamburana_la_SOURCES) $(amburana_SOURCES)
+DIST_SOURCES = $(libamburana_la_SOURCES) $(amburana_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -314,9 +319,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
 LDADD = $(GTKDEPS_LIBS) ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
-common_headers = simple_heap.h general_heap.h minhash.h
-common_src = main.c  simple_heap.c minhash.c
-amburana_SOURCES = $(common_src) $(common_headers) config.h 
+common_headers = amburana.h simple_heap.h general_heap.h minhash.h
+common_src = simple_heap.c minhash.c
+noinst_LTLIBRARIES = libamburana.la   ## change to noinst_LT... if should be linked statically (not installed globally)
+libamburana_la_SOURCES = config.h $(common_headers) $(common_src) 
+amburana_SOURCES = main.c config.h 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -416,6 +423,20 @@ clean-binPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
+	@list='$(noinst_LTLIBRARIES)'; \
+	locs=`for p in $$list; do echo $$p; done | \
+	      sed 's|^[^/]*$$|.|; s|/[^/]*$$||; s|$$|/so_locations|' | \
+	      sort -u`; \
+	test -z "$$locs" || { \
+	  echo rm -f $${locs}; \
+	  rm -f $${locs}; \
+	}
+
+libamburana.la: $(libamburana_la_OBJECTS) $(libamburana_la_DEPENDENCIES) $(EXTRA_libamburana_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(LINK)  $(libamburana_la_OBJECTS) $(libamburana_la_LIBADD) $(LIBS)
+
 amburana$(EXEEXT): $(amburana_OBJECTS) $(amburana_DEPENDENCIES) $(EXTRA_amburana_DEPENDENCIES) 
 	@rm -f amburana$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(amburana_OBJECTS) $(amburana_LDADD) $(LIBS)
@@ -427,8 +448,8 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minhash.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/simple_heap.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minhash.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/simple_heap.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -550,7 +571,7 @@ distdir-am: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS) config.h
+all-am: Makefile $(PROGRAMS) $(LTLIBRARIES) config.h
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -587,12 +608,13 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/main.Po
-	-rm -f ./$(DEPDIR)/minhash.Po
-	-rm -f ./$(DEPDIR)/simple_heap.Po
+	-rm -f ./$(DEPDIR)/minhash.Plo
+	-rm -f ./$(DEPDIR)/simple_heap.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
@@ -639,8 +661,8 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/main.Po
-	-rm -f ./$(DEPDIR)/minhash.Po
-	-rm -f ./$(DEPDIR)/simple_heap.Po
+	-rm -f ./$(DEPDIR)/minhash.Plo
+	-rm -f ./$(DEPDIR)/simple_heap.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -662,19 +684,19 @@ uninstall-am: uninstall-binPROGRAMS
 .MAKE: all install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--depfiles check check-am clean \
-	clean-binPROGRAMS clean-generic clean-libtool cscopelist-am \
-	ctags ctags-am distclean distclean-compile distclean-generic \
-	distclean-hdr distclean-libtool distclean-tags distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-binPROGRAMS
+	clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstLTLIBRARIES cscopelist-am ctags ctags-am distclean \
+	distclean-compile distclean-generic distclean-hdr \
+	distclean-libtool distclean-tags distdir dvi dvi-am html \
+	html-am info info-am install install-am install-binPROGRAMS \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS
 
 .PRECIOUS: Makefile
 
