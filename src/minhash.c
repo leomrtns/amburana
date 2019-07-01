@@ -63,10 +63,10 @@ update_minhash_from_fixedhash (minhash mh, uint64_t hash_f, uint64_t hash_r)
   if (hash_f < hash_r) small_h = hash_f;
   else small_h = hash_r;
 
-  heap64_insert (mh->sketch[0], biomcmc_hashint64_1 (small_h));
-  heap64_insert (mh->sketch[1], biomcmc_hashint64_2 (small_h));
-  heap64_insert (mh->sketch[2], biomcmc_hashint64_3 (small_h));
-  heap64_insert (mh->sketch[3], biomcmc_hashint64_seed (small_h, 6)); // 6 is murmurhash 
+  heap64_insert (mh->sketch[0], biomcmc_xxh64 (&small_h, 8, 3));
+  heap64_insert (mh->sketch[1], biomcmc_murmurhash3 (&small_h, 8, 57, NULL)); // NULL since I dont need out[]
+  heap64_insert (mh->sketch[2], biomcmc_hashint64_salted (small_h, 5));
+  heap64_insert (mh->sketch[3], biomcmc_hashint64_salted (small_h, 10));
 }
 
 void

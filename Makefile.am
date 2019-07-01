@@ -1,3 +1,3 @@
 EXTRA_DIST = recipe 
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = @BIOMCMCLIB@ src tests
+SUBDIRS = submodules/parasail @BIOMCMCLIB@ src tests
