@@ -12,8 +12,89 @@
 uint8_t  dna4bits[256][2] = {{0xff}}; /* DNA base to bitpattern translation, with 1st element set to arbitrary value */
 
 void update_minhash_from_fixedhash (minhash mh, uint64_t hash_f, uint64_t hash_r);
-void fixedhash_values_from_16mer (int dnachar, uint64_t *hf, uint64_t *hr);
+static void fixedhash_values_from_16mer (int dnachar, uint64_t *hf, uint64_t *hr);
 void initialize_dna_to_bit_table (void);
+void biomcmc_hashint64_to_vector (uint64_t x, uint32_t *out);
+void update_cm_sketch_from_fixedhash (cm_sketch cm, uint64_t hash_f, uint64_t hash_r);
+
+cm_sketch
+new_cm_sketch (int max_vector_size)
+{ // this may not be a locally-sensitive hashing (LSH) since similar inputs go to distinct buckets
+  int i, j;
+  cm_sketch cm = (cm_sketch) biomcmc_malloc (sizeof (struct cm_sketch_struct));
+  if (max_vector_size < 16) max_vector_size = 16;
+  cm->size = max_vector_size;
+  cm->mod = 0xffffffff / (max_vector_size + 1); // plusone for case hash == MAX 
+  cm->count = 0; 
+  cm->freq = (int**) biomcmc_malloc (8 * sizeof (int*));
+  for (i = 0; i < 8; i++) {
+    cm->freq[i] = (int*) biomcmc_malloc (cm->size * sizeof (int));
+    for (j = 0; j < cm->size; j++) cm->freq[i][j] = 0;
+  }
+
+  return cm;
+}
+
+void
+del_cm_sketch (cm_sketch cm)
+{
+  int i;
+  if (!cm) return;
+  if (cm->freq) {
+    for (i=7; i >=0; i--) if (cm->freq[i]) free (cm->freq[i]);
+    free (cm->freq);
+  }
+  free (cm);
+}
+
+cm_sketch 
+new_fixedhash_sketch_from_dna (char *dna, int dna_length, int sketch_size)
+{
+  int i;
+  cm_sketch cm = new_cm_sketch (sketch_size);
+  uint64_t hash_f = 0UL, hash_r = 0UL;
+  if (dna4bits[0][0] == 0xff) initialize_dna_to_bit_table ();
+  for (i = 0; i < 15; i++) fixedhash_values_from_16mer ((int) dna[i], &hash_f, &hash_r); 
+  for (i = 15; i < dna_length; i++) {
+    fixedhash_values_from_16mer ((int) dna[i], &hash_f, &hash_r);
+    update_cm_sketch_from_fixedhash (cm, hash_f, hash_r);
+    //for (j = 0; j < 16; j++) printf ("%d ", (int)((hash_f >> 4*j) & 15LL)); for (j = 0; j < 16; j++) printf ("%c", dna[i-j]);
+  }
+  return cm;
+}
+
+void
+update_cm_sketch_from_fixedhash (cm_sketch cm, uint64_t hash_f, uint64_t hash_r)
+{
+  uint32_t h32[8]; // int = (-x,x); uint = (0,2x) 
+  uint64_t small_h=0;  
+  int i; 
+  if (hash_f < hash_r) small_h = hash_f;
+  else small_h = hash_r; 
+
+  biomcmc_hashint64_to_vector (small_h, h32); // first four elements of h32[] are filled
+  small_h = biomcmc_hashint64_salted (small_h, 4); // avalanche used in xxhash 
+  biomcmc_hashint64_to_vector (small_h, h32 + 4); // last four elements of h32[] are filled
+  for (i=0; i < 8; i++) cm->freq[i][ (int) (h32[i]/cm->mod) ]++;  
+  cm->count++;
+}
+
+void
+compare_cm_sketches (cm_sketch cm1, cm_sketch cm2, double *result)
+{
+  int i, j;
+  double x, frac = (double)(cm1->count) / (double)(cm2->count); 
+  for (i=0; i<8; i++) result[i] = 0.;
+  if (cm1->size != cm2->size) biomcmc_error ("can't compare sketches of distinct sizes");
+  for (i=0; i<8; i++) {
+    for (j = 0; j < cm1->size; j++) {
+      // a/m - b/n = (na - mb)/mn = dividing both terms by n = (na/n - mb/n)/ (mn/n) = (a - m/n x b)/m
+      x = (double)(cm1->freq[i][j]) - frac * (double)(cm2->freq[i][j]);
+      result[i] += x * x;
+    }
+    result[i] /= (double)(cm1->count * cm1->count); 
+  }
+}
 
 minhash
 new_minhash (int sketch_size)
@@ -59,37 +140,42 @@ new_minhash_from_dna (char *dna, int dna_length, int sketch_size)
 void
 update_minhash_from_fixedhash (minhash mh, uint64_t hash_f, uint64_t hash_r)
 {
-  uint64_t small_h = 0UL;  
+  uint64_t small_h = 0UL, out[2];  
   if (hash_f < hash_r) small_h = hash_f;
   else small_h = hash_r;
 
-  heap64_insert (mh->sketch[0], biomcmc_xxh64 (&small_h, 8, 3));
-  heap64_insert (mh->sketch[1], biomcmc_murmurhash3 (&small_h, 8, 57, NULL)); // NULL since I dont need out[]
-  heap64_insert (mh->sketch[2], biomcmc_hashint64_salted (small_h, 5));
-  heap64_insert (mh->sketch[3], biomcmc_hashint64_salted (small_h, 10));
+  biomcmc_murmurhash3_128bits (&small_h, 8, 57, out); 
+  heap64_insert (mh->sketch[0], out[0]);
+  heap64_insert (mh->sketch[1], out[1]);
+  heap64_insert (mh->sketch[2], biomcmc_xxh64 (&small_h, 4, 3)); // 4 means only first 32 bits
+  small_h = small_h >> 32UL; // last 32 bits
+  heap64_insert (mh->sketch[3], biomcmc_xxh64 (&small_h, 4, 3));  // 4 means only first 32 bits
 }
 
 void
 compare_minhashes (minhash mh1, minhash mh2, double *result)
-{
-  int i, j1, j2, n1, n2, count;
+{ // obs: minhash calcs distance (not similarity), counts how many k-mers are in common until intersection is sketch_size
+  int i, j1, j2, n1, n2, common, compared;
   uint64_t *h1, *h2;
   if (mh1->sketch_size != mh2->sketch_size) biomcmc_error ("can't compare sketches of distinct sizes");
   for (i=0; i<4; i++) { 
-    count = 0;
     h1 = mh1->sketch[i]->hash;    n1 = mh1->sketch[i]->n;
     h2 = mh2->sketch[i]->hash;    n2 = mh2->sketch[i]->n;
-
-    for (j1 = j2 = 0; (j1 < n1) && (j2 < n2); ) { // both are in decreasing order
+    common = compared = 0;
+    for (j1 = j2 = 0; (j1 < n1) && (j2 < n2) && compared < mh1->sketch_size; compared++) { // both are in decreasing order
       if (h1[j1] > h2[j2]) j1++; 
       else if (h1[j1] < h2[j2]) j2++; 
-      else { count++; j1++; j2++; } // same hash in both
+      else { common++; j1++; j2++; } // same hash in both
     }
-    result[i] = (double) (count) / (double) (n1 > n2 ? n1 : n2);
+    if (compared < mh1->sketch_size) compared += (n1 - j1 + n2 - j2); // try to complete the union operation (following Mash)
+    if (compared > mh1->sketch_size) compared = mh1->sketch_size;
+    result[i] = (double) (common) / (double) (compared);
+    // dist = -log(2.*result/(1.+result)) / kmersize;
+    // pvalue =  gsl_cdf_binomial_Q(x - 1, r, sketchSize); r=pX*pY/(pX+ pY- pX*pY); pX = 1./(1.+kmerSpace/n2); pY = 1./(1.+kmerSpace/n1); kmerspace=4**kmersize
   }
 }
 
-void
+static void
 fixedhash_values_from_16mer (int dnachar, uint64_t *hf, uint64_t *hr)
 {
   *hf = *hf << 4 | dna4bits[dnachar][0]; // forward
@@ -123,4 +209,18 @@ initialize_dna_to_bit_table (void)
   dna4bits['?'][0] = 15;  dna4bits['?'][1] = 15; /* .TGCA */ /* 1111 */ /* reverse is 'TGCA' = 15 */
   dna4bits['-'][0] = 0;   dna4bits['-'][1] = 0;  /* .TGCA */ /* fifth state */
 }
+// trick : 0xAAAAAAAAAA 0x5555555555 (A=1010 5=0101) for 32bits
+
+void
+biomcmc_hashint64_to_vector (uint64_t x, uint32_t *out) /* 64 bits, splits into two 32bits blocks */
+{
+  uint32_t low = x;
+  uint32_t high = x >> 32UL;
+  out[0] =biomcmc_hashint_salted (low, 1);
+  out[1] =biomcmc_hashint_salted (high, 2);
+  x =biomcmc_hashint64_salted (x, 5);
+  out[2] = (uint32_t) x;
+  out[3] = (uint32_t) (x >> 32UL);
+}
+
 

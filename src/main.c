@@ -77,7 +77,7 @@ main (int argc, char **argv)
   cm_sketch *cm;
   minhash *mh;
   double dist[8];
-  parasail_result_t* nwresult;
+  //parasail_result_t* nwresult;
   alignment aln;
 
   arg_parameters params = get_parameters_from_argv (argc, argv);
@@ -95,16 +95,17 @@ main (int argc, char **argv)
   time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
-    nwresult = parasail_nw_banded (aln->character->string[i], aln->character->nchars[i], 
-                                   aln->character->string[j], aln->character->nchars[j], 1, 4, 32, &parasail_nuc44); 
+    printf ("\n%38s %38s ", aln->taxlabel->string[j], aln->taxlabel->string[i]);
 
-    printf ("\n%38s %38s %14d    ", aln->taxlabel->string[j], aln->taxlabel->string[i], parasail_result_get_score (nwresult));
+    //nwresult = parasail_nw_banded (aln->character->string[i], aln->character->nchars[i], 
+    //                               aln->character->string[j], aln->character->nchars[j], 1, 4, 16, &parasail_nuc44); 
+    //printf (" %14d    ", parasail_result_get_score (nwresult));
 
     compare_cm_sketches (cm[i], cm[j], dist);
     for (k=0;k<8;k++) printf ("%8.6lf ", dist[k]);
     compare_minhashes (mh[i], mh[j], dist);
     for (k=0;k<4;k++) printf ("%8.6lf ", dist[k]);
-    parasail_result_free(nwresult);
+    //parasail_result_free(nwresult);
   }
 
   for (i= aln->ntax -1; i >- 0; i--) { del_cm_sketch (cm[i]); del_minhash (mh[i]); }
