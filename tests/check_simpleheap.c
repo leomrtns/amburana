@@ -55,11 +55,11 @@ START_TEST(heap_timing_function)
 }
 END_TEST
 
-START_TEST(fixedhash_sketch_alignment_function)
+START_TEST(onephash_alignment_function)
 {
   int i,j;
-  cm_sketch *cm;
-  double dist[8];
+  onephash *oh;
+  double dist[4];
   clock_t time0, time1;
   alignment aln;
 
@@ -67,13 +67,13 @@ START_TEST(fixedhash_sketch_alignment_function)
   memcpy(filename + prefix_size, "bacteria_riboprot.fasta", 23);
   aln = read_alignment_from_file (filename);
   time1 = clock (); printf ("  time to read alignment: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-  cm = (cm_sketch*) biomcmc_malloc (aln->ntax * sizeof (cm_sketch));
-  for (i=0; i < aln->ntax; i++) cm[i] = new_fixedhash_sketch_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
-  time1 = clock (); printf ("  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_cm_sketches (cm[i], cm[j], dist);
-  time1 = clock (); printf ("  time to compare sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-  for (i= aln->ntax -1; i >- 0; i--) del_cm_sketch (cm[i]); 
-  if (cm) free (cm);
+  oh = (onephash*) biomcmc_malloc (aln->ntax * sizeof (onephash));
+  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], 4);
+  time1 = clock (); printf ("  time to calculate onephash sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_onephash (oh[i], oh[j], dist);
+  time1 = clock (); printf ("  time to compare onephash sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  for (i= aln->ntax -1; i >- 0; i--) del_onephash (oh[i]); 
+  if (oh) free (oh);
   del_alignment (aln);
   if (false) ck_abort_msg ("dummy");
 }
@@ -94,7 +94,7 @@ START_TEST(minhash_alignment_function)
   mh = (minhash*) biomcmc_malloc (aln->ntax * sizeof (minhash));
   for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
   time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_minhashes (mh[i], mh[j], dist);
+  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_minhash (mh[i], mh[j], dist);
   time1 = clock (); printf ("  time to compare minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
   for (i= aln->ntax -1; i >- 0; i--) del_minhash (mh[i]); 
   if (mh) free (mh);
@@ -112,7 +112,9 @@ Suite * simpleheap_suite(void)
   s = suite_create("Simple MaxHeap");
   tc_case = tcase_create("max heap finalising timings");
   tcase_add_test(tc_case, heap_timing_function);
-  tcase_add_test(tc_case, fixedhash_sketch_alignment_function);
+  suite_add_tcase(s, tc_case);
+  tc_case = tcase_create("minhash sketches");
+  tcase_add_test(tc_case, onephash_alignment_function);
   tcase_add_test(tc_case, minhash_alignment_function);
   suite_add_tcase(s, tc_case);
   return s;

@@ -7,8 +7,9 @@ typedef struct
 {
   struct arg_lit  *help;
   struct arg_lit  *version;
-  struct arg_file *spname;
-  struct arg_int  *size;
+  struct arg_file *fasta;
+  struct arg_int  *sketch;
+  struct arg_int  *nbits;
   struct arg_end  *end;
   void **argtable;
 } arg_parameters;
@@ -21,15 +22,17 @@ arg_parameters
 get_parameters_from_argv (int argc, char **argv)
 {
   arg_parameters params = {
-    .help = arg_litn("h","help",0, 1, "print a longer help and exit"),
+    .help    = arg_litn("h","help",0, 1, "print a longer help and exit"),
     .version = arg_litn("v","version",0, 1, "print version and exit"),
-    .spname = arg_file0("s","species", "<file name>", "file "),
-    .size = arg_int0("n", "size", "<n>", "sketch size"),
-    .end  = arg_end(10) // max number of errors it can store (o.w. shows "too many errors")
+    .fasta   = arg_filen(NULL, NULL, NULL, 1, 1, "fasta file"),
+    .sketch  = arg_int0("s", "size", "<n>", "sketch size for minhash"),
+    .nbits   = arg_int0("b", "bits", "<n>", "number of bits for suffix of one-permutation minhash"),
+    .end     = arg_end(10) // max number of errors it can store (o.w. shows "too many errors")
   };
-  void* argtable[] = {params.help, params.version, params.spname, params.size, params.end};
+  void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.end};
   params.argtable = argtable; 
-  params.size->ival[0] = 256; // default (must be before parsing)
+  params.sketch->ival[0] = 64; // default (must be before parsing)
+  params.nbits->ival[0] = 5; // default (must be before parsing)
   /* actual parsing: */
   if (arg_nullcheck(params.argtable)) biomcmc_error ("Problem allocating memory for the argtable (command line arguments) structure");
   arg_parse (argc, argv, params.argtable); // returns >0 if errors were found, but this info also on params.end->count
@@ -42,8 +45,9 @@ del_arg_parameters (arg_parameters params)
 {
   if (params.help) free (params.help);
   if (params.version) free (params.version);
-  if (params.spname) free (params.spname);
-  if (params.size) free (params.size);
+  if (params.fasta) free (params.fasta);
+  if (params.sketch) free (params.sketch);
+  if (params.nbits) free (params.nbits);
   if (params.end) free (params.end);
 }
 
@@ -74,7 +78,7 @@ main (int argc, char **argv)
 {
   int i,j,k;
   clock_t time0, time1;
-  cm_sketch *cm;
+  onephash *oh;
   minhash *mh;
   double dist[8];
   //parasail_result_t* nwresult;
@@ -83,15 +87,15 @@ main (int argc, char **argv)
   arg_parameters params = get_parameters_from_argv (argc, argv);
 
   time0 = clock (); 
-  aln = read_alignment_from_file ((char*) params.spname->filename[0]);
-  time1 = clock (); printf ("  time to read alignment: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
+  oh = (onephash*) biomcmc_malloc (aln->ntax * sizeof (onephash));
+  mh = (minhash*)  biomcmc_malloc (aln->ntax * sizeof (minhash));
+  time1 = clock (); printf ("  time to read alignment and set sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  cm = (cm_sketch*) biomcmc_malloc (aln->ntax * sizeof (cm_sketch));
-  mh = (minhash*) biomcmc_malloc (aln->ntax * sizeof (minhash));
-
-  for (i=0; i < aln->ntax; i++) cm[i] = new_fixedhash_sketch_from_dna (aln->character->string[i], aln->character->nchars[i], params.size->ival[0]);
+  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], params.nbits->ival[0]);
   time1 = clock (); printf ("  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
-  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.size->ival[0]);
+
+  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.sketch->ival[0]);
   time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
@@ -101,15 +105,14 @@ main (int argc, char **argv)
     //                               aln->character->string[j], aln->character->nchars[j], 1, 4, 16, &parasail_nuc44); 
     //printf (" %14d    ", parasail_result_get_score (nwresult));
 
-    compare_cm_sketches (cm[i], cm[j], dist);
-    for (k=0;k<8;k++) printf ("%8.6lf ", dist[k]);
-    compare_minhashes (mh[i], mh[j], dist);
-    for (k=0;k<4;k++) printf ("%8.6lf ", dist[k]);
+    compare_onephash (oh[i], oh[j], dist);
+    compare_minhash (mh[i], mh[j], dist+4);
+    for (k=0;k<8;k++) printf ("%9.7lf ", dist[k]);
     //parasail_result_free(nwresult);
   }
 
-  for (i= aln->ntax -1; i >- 0; i--) { del_cm_sketch (cm[i]); del_minhash (mh[i]); }
-  if (cm) free (cm);
+  for (i= aln->ntax -1; i >- 0; i--) { del_onephash (oh[i]); del_minhash (mh[i]); }
+  if (oh) free (oh);
   if (mh) free (mh);
   del_alignment (aln);
 
