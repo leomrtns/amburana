@@ -21,6 +21,7 @@ struct minhash_struct
 {
   int sketch_size, n_sketch;
   heap64 *sketch;
+  kmerhash kmer; // we need some constants defined here (kmer sizes)
 };
 
 struct onephash_struct
@@ -28,14 +29,15 @@ struct onephash_struct
   int sketch_size, n_sketch, n_bits;
   uint64_t suffix_mask, **sketch; // each vector will have the min value over all from bin
   uint64_t precision_mask;
+  kmerhash kmer;
 };
 
-minhash new_minhash_from_dna (char *dna, size_t dna_length, int sketch_size);
+minhash new_minhash_from_dna (char *dna, size_t dna_length, int sketch_size, bool dense);
 void del_minhash (minhash mh);
-void compare_minhash (minhash mh1, minhash mh2, double *result);
+void compare_minhash (minhash mh1, minhash mh2, double *distance);
 
-onephash new_onephash_from_dna (char *dna, size_t dna_length, int n_bits);
+onephash new_onephash_from_dna (char *dna, size_t dna_length, int n_bits, bool dense);
 void del_onephash (onephash oph);
-void compare_onephash (onephash oh1, onephash oh2, double *result);
+void compare_onephash (onephash oh1, onephash oh2, double *distance);
 
 #endif

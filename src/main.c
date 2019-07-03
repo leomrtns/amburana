@@ -80,7 +80,7 @@ main (int argc, char **argv)
   clock_t time0, time1;
   onephash *oh;
   minhash *mh;
-  double dist[8];
+  double dist[14];
   //parasail_result_t* nwresult;
   alignment aln;
 
@@ -92,10 +92,10 @@ main (int argc, char **argv)
   mh = (minhash*)  biomcmc_malloc (aln->ntax * sizeof (minhash));
   time1 = clock (); printf ("  time to read alignment and set sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], params.nbits->ival[0]);
+  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], params.nbits->ival[0], false);
   time1 = clock (); printf ("  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.sketch->ival[0]);
+  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.sketch->ival[0], false);
   time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
@@ -106,8 +106,8 @@ main (int argc, char **argv)
     //printf (" %14d    ", parasail_result_get_score (nwresult));
 
     compare_onephash (oh[i], oh[j], dist);
-    compare_minhash (mh[i], mh[j], dist+4);
-    for (k=0;k<8;k++) printf ("%9.7lf ", dist[k]);
+    compare_minhash (mh[i], mh[j], dist+7);
+    for (k=0;k<14;k++) printf ("%9.7lf ", dist[k]);
     //parasail_result_free(nwresult);
   }
 

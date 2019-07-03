@@ -24,6 +24,7 @@ new_minhash (int sketch_size, int n_sketch)
   minh->n_sketch = n_sketch; // should match hashes available at kmerhash (or added by hand from those)
   minh->sketch = (heap64*) biomcmc_malloc (minh->n_sketch * sizeof (heap64*));
   for (i = 0; i < minh->n_sketch; i++) minh->sketch[i] = new_heap64 (sketch_size * (i+1)); // longer kmers have longer sketches 
+  minh->kmer = NULL;
   return minh;
 }
 
@@ -36,30 +37,32 @@ del_minhash (minhash minh)
     for (i=minh->n_sketch-1; i >=0; i--) del_heap64 (minh->sketch[i]);
     free (minh->sketch);
   }
+  del_kmerhash (minh->kmer);
   free (minh);
 }
 
 minhash
-new_minhash_from_dna (char *dna, size_t dna_length, int sketch_size)
+new_minhash_from_dna (char *dna, size_t dna_length, int sketch_size, bool dense)
 {
   int i;
-  kmerhash kmer = new_kmerhash_from_dna_sequence (dna, dna_length, true); // false = 4 bits per site (o.w. 2 bits) 
+  kmerhash kmer = new_kmerhash_from_dna_sequence (dna, dna_length, dense); // false = 4 bits per site (o.w. 2 bits) 
   minhash minh = new_minhash (sketch_size, kmer->n_hash); // use all hashes available by kmerhash
+  minh->kmer = kmer;
 
-  while ( kmerhash_iterator (kmer)) {
-    for (i = 0; i < minh->n_sketch; i++) heap64_insert (minh->sketch[i], kmer->hash[i]);
+  while ( kmerhash_iterator (minh->kmer)) {
+    for (i = 0; i < minh->n_sketch; i++) heap64_insert (minh->sketch[i], minh->kmer->hash[i]);
   }
 
   for (i = 0; i < minh->n_sketch; i++) heap64_finalise_heap_qsort (minh->sketch[i]);
-  del_kmerhash (kmer);
   return minh;
 }
 
 void
-compare_minhash (minhash mh1, minhash mh2, double *result)
+compare_minhash (minhash mh1, minhash mh2, double *distance)
 {
   int i, j1, j2, n1, n2, common, compared;
   uint64_t *h1, *h2;
+  double r;
   if (mh1->n_sketch != mh2->n_sketch) biomcmc_error ("can't map between minhash sketches");
   for (i = 0; i < mh1->n_sketch; i++) {
     if (mh1->sketch[i]->heap_size != mh2->sketch[i]->heap_size) biomcmc_error ("Distinct size sketches: comparable in theory but likely a mistake");
@@ -73,8 +76,12 @@ compare_minhash (minhash mh1, minhash mh2, double *result)
     }
     if (compared < mh1->sketch[i]->heap_size) compared += (n1 - j1 + n2 - j2); // try to complete the union operation (following Mash)
     if (compared > mh1->sketch[i]->heap_size) compared = mh1->sketch_size;
-    result[i] = (double) (common) / (double) (compared);
-    // dist = -log(2.*result/(1.+result)) / kmersize;
+    if (common == compared) distance[i] = 0.;
+    else if (common == 0) distance[i] = 1.;
+    else {
+      r = (double) (common) / (double) (compared);
+      distance[i] = -log (2. * r/(1. + r)) / (double) (mh1->kmer->nsites_kmer[i]);
+    }
     // pvalue =  gsl_cdf_binomial_Q(x - 1, r, sketchSize); r=pX*pY/(pX+ pY- pX*pY); pX = 1./(1.+kmerSpace/n2); pY = 1./(1.+kmerSpace/n1); kmerspace=4**kmersize
   }
 }
@@ -99,6 +106,7 @@ new_onephash (int n_bits, int n_sketch)
     oph->sketch[i] = (uint64_t*) biomcmc_malloc (oph->sketch_size * sizeof (uint64_t));
     for (j = 0; j < oph->sketch_size; j++) oph->sketch[i][j] = xFULL64; // max possible uint64_t
   } 
+  oph->kmer = NULL;
   return oph;
 }
 
@@ -111,32 +119,34 @@ del_onephash (onephash oph)
     for (i = oph->n_sketch - 1; i >= 0; i--) if (oph->sketch[i]) free (oph->sketch[i]); 
     free (oph->sketch);
   }
+  del_kmerhash (oph->kmer);
   free (oph);
 }
 
 onephash
-new_onephash_from_dna (char *dna, size_t dna_length, int n_bits)
+new_onephash_from_dna (char *dna, size_t dna_length, int n_bits, bool dense)
 {
   int i;
   uint64_t prefix = 0UL;
   uint32_t suffix = 0UL;
 
-  kmerhash kmer = new_kmerhash_from_dna_sequence (dna, dna_length, true); // false = 4 bits per site (o.w. 2 bits) 
+  kmerhash kmer = new_kmerhash_from_dna_sequence (dna, dna_length, dense); // false = 4 bits per site (o.w. 2 bits) 
   onephash oph = new_onephash (n_bits, kmer->n_hash);
+  oph->kmer = kmer; 
 
-  while ( kmerhash_iterator (kmer)) for (i = 0; i < oph->n_sketch; i++) {
-    prefix = kmer->hash[i] >> oph->n_bits; // hash with (64 - n_bits) bits
-    suffix = kmer->hash[i] &  oph->suffix_mask;   // int value of least sig n_bits of hash
+  while ( kmerhash_iterator (oph->kmer)) for (i = 0; i < oph->n_sketch; i++) {
+    prefix = oph->kmer->hash[i] >> oph->n_bits; // hash with (64 - n_bits) bits
+    suffix = oph->kmer->hash[i] &  oph->suffix_mask;   // int value of least sig n_bits of hash
     if (oph->sketch[i][suffix] > prefix) oph->sketch[i][suffix] = prefix;
   }
-  del_kmerhash (kmer);
   return oph;
 }
 
 void
-compare_onephash (onephash oh1, onephash oh2, double *result)
+compare_onephash (onephash oh1, onephash oh2, double *distance)
 {
   int i, j, compared, common; 
+  double r;
   if (oh1->sketch_size != oh2->sketch_size) biomcmc_error ("can't compare one-perm hashes of distinct sketch sizes");
   if (oh1->n_sketch != oh2->n_sketch) biomcmc_error ("can't compare one-perm hashes with different number of sketches");
   for (i = 0; i < oh1->n_sketch; i++) {
@@ -146,6 +156,11 @@ compare_onephash (onephash oh1, onephash oh2, double *result)
         compared++;
         if ((oh1->sketch[i][j] & oh1->precision_mask) == (oh2->sketch[i][j] & oh2->precision_mask)) common++;
     }
-    result[i] = (double) (common) / (double) (compared);
+    if (common == compared) distance[i] = 0.;
+    else if (common == 0) distance[i] = 1.;
+    else {
+      r = (double) (common) / (double) (compared);
+      distance[i] = -log (2. * r/(1. + r)) / (double) (oh1->kmer->nsites_kmer[i]);
+    }
   }
 }

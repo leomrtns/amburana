@@ -68,7 +68,7 @@ START_TEST(onephash_alignment_function)
   aln = read_alignment_from_file (filename);
   time1 = clock (); printf ("  time to read alignment: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
   oh = (onephash*) biomcmc_malloc (aln->ntax * sizeof (onephash));
-  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], 4);
+  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], 8, false);
   time1 = clock (); printf ("  time to calculate onephash sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_onephash (oh[i], oh[j], dist);
   time1 = clock (); printf ("  time to compare onephash sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
@@ -92,7 +92,7 @@ START_TEST(minhash_alignment_function)
   aln = read_alignment_from_file (filename);
   time1 = clock (); printf ("  time to read alignment: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
   mh = (minhash*) biomcmc_malloc (aln->ntax * sizeof (minhash));
-  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], 64);
+  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], 64, false);
   time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) compare_minhash (mh[i], mh[j], dist);
   time1 = clock (); printf ("  time to compare minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
