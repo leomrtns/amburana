@@ -43,7 +43,7 @@ AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug], [enable debugging with 
 AC_MSG_RESULT([$debugit])
 if test x"$debugit" = x"yes"; then
     AC_DEFINE([BIOMCMC_DEBUG],[],[Debug Mode, with assert()-like error checking])
-    AM_CFLAGS="${AM_CFLAGS} -g -W -Wall -Werror -Wno-uninitialized -O0 -std=gnu11"
+    AM_CFLAGS="${AM_CFLAGS} -g -W -pg -Wall -Werror -Wno-uninitialized -O0 -std=gnu11"
 else
     AM_CFLAGS="${AM_CFLAGS} -funroll-loops -fomit-frame-pointer -finline-functions -O4 -std=gnu11"
 fi

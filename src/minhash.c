@@ -13,17 +13,20 @@
 minhash new_minhash (int sketch_size, int n_sketch);
 onephash new_onephash (int n_bits, int n_sketch);
 
-
 minhash
 new_minhash (int sketch_size, int n_sketch)
 {
   int i;
+  double scale = 1.;
   minhash minh = (minhash) biomcmc_malloc (sizeof (struct minhash_struct));
   if (sketch_size < 8)    sketch_size = 8; // ideal 16~128 
   if (sketch_size > 2048) sketch_size = 2048; // should be small, since longer kmer have bigger sizes
   minh->n_sketch = n_sketch; // should match hashes available at kmerhash (or added by hand from those)
   minh->sketch = (heap64*) biomcmc_malloc (minh->n_sketch * sizeof (heap64*));
-  for (i = 0; i < minh->n_sketch; i++) minh->sketch[i] = new_heap64 (sketch_size * (i+1)); // longer kmers have longer sketches 
+  for (i = 0; i < minh->n_sketch; i++) {
+    minh->sketch[i] = new_heap64 ((int)(scale * (double)(sketch_size))); // longer kmers have longer sketches 
+    scale *= 1.2; // doubles every ~4 iterations
+  }
   minh->kmer = NULL;
   return minh;
 }
@@ -45,7 +48,8 @@ minhash
 new_minhash_from_dna (char *dna, size_t dna_length, int sketch_size, bool dense)
 {
   int i;
-  kmerhash kmer = new_kmerhash_from_dna_sequence (dna, dna_length, dense); // false = 4 bits per site (o.w. 2 bits) 
+  kmerhash kmer = new_kmerhash (dense); // false = 4 bits per site (o.w. 2 bits) 
+  link_kmerhash_to_dna_sequence (kmer, dna, dna_length); // not ideal, since we can create ONE kmerhash for whole analysis 
   minhash minh = new_minhash (sketch_size, kmer->n_hash); // use all hashes available by kmerhash
   minh->kmer = kmer;
 
@@ -130,7 +134,8 @@ new_onephash_from_dna (char *dna, size_t dna_length, int n_bits, bool dense)
   uint64_t prefix = 0UL;
   uint32_t suffix = 0UL;
 
-  kmerhash kmer = new_kmerhash_from_dna_sequence (dna, dna_length, dense); // false = 4 bits per site (o.w. 2 bits) 
+  kmerhash kmer = new_kmerhash (dense); // false = 4 bits per site (o.w. 2 bits) 
+  link_kmerhash_to_dna_sequence (kmer, dna, dna_length); // not ideal, since we can create ONE kmerhash for whole analysis 
   onephash oph = new_onephash (n_bits, kmer->n_hash);
   oph->kmer = kmer; 
 
@@ -164,3 +169,43 @@ compare_onephash (onephash oh1, onephash oh2, double *distance)
     }
   }
 }
+
+/*
+
+new_cm_sketch (int max_vector_size)
+{ // this may not be a locally-sensitive hashing (LSH) since similar inputs go to distinct buckets
+  int i, j;
+  cm_sketch cm = (cm_sketch) biomcmc_malloc (sizeof (struct cm_sketch_struct));
+  if (max_vector_size < 16) max_vector_size = 16;
+  cm->size = max_vector_size;
+  cm->mod = 0xffffffff / (max_vector_size + 1); // plusone for case hash == MAX 
+  cm->count = 0; 
+  cm->freq = (int**) biomcmc_malloc (8 * sizeof (int*));
+  for (i = 0; i < 8; i++) {
+    cm->freq[i] = (int*) biomcmc_malloc (cm->size * sizeof (int));
+    for (j = 0; j < cm->size; j++) cm->freq[i][j] = 0;
+  }
+// obs: when adding, can check if hash > max_size (only then hash/(max/nbuck)
+  return cm;
+}
+  for (i=0; i < 8; i++) cm->freq[i][ (int) (h32[i]/cm->mod) ]++;  
+  cm->count++;
+
+void
+compare_cm_sketches (cm_sketch cm1, cm_sketch cm2, double *result)
+{
+  int i, j;
+  double x, frac = (double)(cm1->count) / (double)(cm2->count); 
+  for (i=0; i<8; i++) result[i] = 0.;
+  if (cm1->size != cm2->size) biomcmc_error ("can't compare sketches of distinct sizes");
+  for (i=0; i<8; i++) {
+    for (j = 0; j < cm1->size; j++) {
+      // a/m - b/n = (na - mb)/mn = dividing both terms by n = (na/n - mb/n)/ (mn/n) = (a - m/n x b)/m
+      x = (double)(cm1->freq[i][j]) - frac * (double)(cm2->freq[i][j]);
+      result[i] += x * x;
+    }
+    result[i] /= (double)(cm1->count * cm1->count); 
+  }
+}
+
+*/

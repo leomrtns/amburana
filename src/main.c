@@ -1,7 +1,7 @@
 #include <amburana.h>
 #include "simple_heap.c"
 #include "minhash.c"
-#include "parasail/matrices/nuc44.h"
+//#include "parasail/matrices/nuc44.h"
 
 typedef struct
 {
@@ -90,13 +90,13 @@ main (int argc, char **argv)
   aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
   oh = (onephash*) biomcmc_malloc (aln->ntax * sizeof (onephash));
   mh = (minhash*)  biomcmc_malloc (aln->ntax * sizeof (minhash));
-  time1 = clock (); printf ("  time to read alignment and set sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  time1 = clock (); fprintf (stderr, "  time to read alignment and set sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], params.nbits->ival[0], false);
-  time1 = clock (); printf ("  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], params.nbits->ival[0], true);
+  time1 = clock (); fprintf (stderr, "  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.sketch->ival[0], false);
-  time1 = clock (); printf ("  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.sketch->ival[0], true);
+  time1 = clock (); fprintf (stderr, "  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
     printf ("\n%38s %38s ", aln->taxlabel->string[j], aln->taxlabel->string[i]);

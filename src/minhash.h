@@ -41,3 +41,11 @@ void del_onephash (onephash oph);
 void compare_onephash (onephash oh1, onephash oh2, double *distance);
 
 #endif
+/*
+struct cm_sketch_struct
+{
+  int size, count;
+  uint32_t mod;
+  int **freq;
+};
+*/

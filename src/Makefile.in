@@ -119,8 +119,8 @@ am_amburana_OBJECTS = main.$(OBJEXT)
 amburana_OBJECTS = $(am_amburana_OBJECTS)
 amburana_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-amburana_DEPENDENCIES = ../submodules/parasail/libparasail.la \
-	../biomcmc-lib/lib/libbiomcmc.la $(am__DEPENDENCIES_1)
+amburana_DEPENDENCIES = ../biomcmc-lib/lib/libbiomcmc.la \
+	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -315,8 +315,11 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../@BIOMCMCLIB@/lib -I$(srcdir)/../submodules/parasail/ @OPENMP_CPPFLAGS@
-LDADD = $(GTKDEPS_LIBS) ../submodules/parasail/libparasail.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
+
+#AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../@BIOMCMCLIB@/lib -I$(srcdir)/../submodules/parasail/ @OPENMP_CPPFLAGS@
+#LDADD = $(GTKDEPS_LIBS) ../submodules/parasail/libparasail.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
+AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
+LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
 common_headers = amburana.h simple_heap.h general_heap.h minhash.h
 common_src = simple_heap.c minhash.c
 noinst_LTLIBRARIES = libamburana.la   ## change to noinst_LT... if should be linked statically (not installed globally)
