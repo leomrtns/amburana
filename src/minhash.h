@@ -7,38 +7,45 @@
  */
 
 /*! \file minhash.h 
- *  \brief MinHash, b-bit (k-partition) sketches for DNA sequences
+ *  \brief heap minhash, b-bit (k-partition) minhash sketches for DNA sequences
  */
 #ifndef _amburana_minhash_h_
 #define _amburana_minhash_h_
 
 #include "simple_heap.h" 
 
-typedef struct minhash_struct* minhash;   // only one that needs maxheap
-typedef struct onephash_struct* onephash; // also can use distinct hashes instead of x/mod
+typedef struct sketch_set_struct* sketch_set;  // collection of minhashes etc for one kmerhash 
+typedef struct heap_minhash_sketch_struct* heap_minhash_sketch;  // only one that needs maxheap
+typedef struct bbit_minhash_sketch_struct* bbit_minhash_sketch;  // also can use distinct hashes instead of x/mod
 
-struct minhash_struct
+struct sketch_set_struct
 {
-  int sketch_size, n_sketch;
-  heap64 *sketch;
-  kmerhash kmer; // we need some constants defined here (kmer sizes)
-};
-
-struct onephash_struct
-{ 
-  int sketch_size, n_sketch, n_bits;
-  uint64_t suffix_mask, **sketch; // each vector will have the min value over all from bin
-  uint64_t precision_mask;
+  uint8_t n_heap_mh, n_bbit_mh;
+  uint8_t i_heap[16], i_bbit[16]; // id of hash elements
+  double *dist;
+  heap_minhash *heap_mh;
+  bbit_minhash *bbit_mh;
   kmerhash kmer;
 };
 
-minhash new_minhash_from_dna (char *dna, size_t dna_length, int sketch_size, bool dense);
-void del_minhash (minhash mh);
-void compare_minhash (minhash mh1, minhash mh2, double *distance);
+struct heap_minhash_sketch_struct
+{
+  int sketch_size;
+  heap64 sketch;
+  kmerhash kmer; // we need some constants defined here (kmer sizes)
+};
 
-onephash new_onephash_from_dna (char *dna, size_t dna_length, int n_bits, bool dense);
-void del_onephash (onephash oph);
-void compare_onephash (onephash oh1, onephash oh2, double *distance);
+struct bbit_minhash_sketch_struct
+{ 
+  int sketch_size, n_bits;
+  uint64_t suffix_mask, *sketch; // each vector will have the min value over all from bin
+  kmerhash kmer;
+};
+
+sketch_set new_sketch_set (kmerhash kmer, int heap_mh_size, int bbit_mh_bits);
+void del_sketch_set (sketch_set sset);
+sketch_set new_sketch_set_from_dna (char *dna, size_t dna_length, kmerhash kmer);
+void compare_sketch_set (sketch_set ss1, sketch_set ss2);
 
 #endif
 /*

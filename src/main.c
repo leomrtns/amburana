@@ -78,42 +78,31 @@ main (int argc, char **argv)
 {
   int i,j,k;
   clock_t time0, time1;
-  onephash *oh;
-  minhash *mh;
-  double dist[14];
-  //parasail_result_t* nwresult;
+  sketch_set *sset;
+  kmerhash kmer = new_kmerhash (kmer_class_fast);
   alignment aln;
 
   arg_parameters params = get_parameters_from_argv (argc, argv);
 
   time0 = clock (); 
   aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
-  oh = (onephash*) biomcmc_malloc (aln->ntax * sizeof (onephash));
-  mh = (minhash*)  biomcmc_malloc (aln->ntax * sizeof (minhash));
+  sset = (sketch_set*) biomcmc_malloc (aln->ntax * sizeof (sketch_set));
   time1 = clock (); fprintf (stderr, "  time to read alignment and set sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
-  for (i=0; i < aln->ntax; i++) oh[i] = new_onephash_from_dna (aln->character->string[i], aln->character->nchars[i], params.nbits->ival[0], true);
-  time1 = clock (); fprintf (stderr, "  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  for (i=0; i < aln->ntax; i++) 
+    sset[i] = new_sketch_set_from_dna (aln->character->string[i], aln->character->nchars[i], kmer, params.sketch->ival[0], params.nbits->ival[0]);
 
-  for (i=0; i < aln->ntax; i++) mh[i] = new_minhash_from_dna (aln->character->string[i], aln->character->nchars[i], params.sketch->ival[0], true);
-  time1 = clock (); fprintf (stderr, "  time to calculate minhashes: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
+  time1 = clock (); fprintf (stderr, "  time to calculate sketches: %.8f secs\n", (double)(time1-time0)/(double)CLOCKS_PER_SEC);
 
   for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
     printf ("\n%38s %38s ", aln->taxlabel->string[j], aln->taxlabel->string[i]);
 
-    //nwresult = parasail_nw_banded (aln->character->string[i], aln->character->nchars[i], 
-    //                               aln->character->string[j], aln->character->nchars[j], 1, 4, 16, &parasail_nuc44); 
-    //printf (" %14d    ", parasail_result_get_score (nwresult));
-
-    compare_onephash (oh[i], oh[j], dist);
-    compare_minhash (mh[i], mh[j], dist+7);
-    for (k=0;k<14;k++) printf ("%9.7lf ", dist[k]);
-    //parasail_result_free(nwresult);
+    compare_sketch_set (sset[i], sset[j]);
+    for (k=0; k < (sset[i]->n_heap_mh + sset[i]->n_bbit_mh); k++) printf ("%9.7lf ", sset1[i]->dist[k]);
   }
 
-  for (i= aln->ntax -1; i >- 0; i--) { del_onephash (oh[i]); del_minhash (mh[i]); }
-  if (oh) free (oh);
-  if (mh) free (mh);
+  for (i= aln->ntax -1; i >- 0; i--) { del_sketch_set (sset[i]); }
+  if (sset) free (sset);
   del_alignment (aln);
 
   del_arg_parameters (params);

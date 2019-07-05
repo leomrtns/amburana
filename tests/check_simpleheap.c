@@ -54,7 +54,7 @@ START_TEST(heap_timing_function)
   if (t_qsort > 2 * t_pop) ck_abort_msg ("qsort implementation too slow");
 }
 END_TEST
-
+/*
 START_TEST(onephash_alignment_function)
 {
   int i,j;
@@ -102,7 +102,7 @@ START_TEST(minhash_alignment_function)
   if (false) ck_abort_msg ("dummy");
 }
 END_TEST
-
+*/
 
 Suite * simpleheap_suite(void)
 {
@@ -113,10 +113,10 @@ Suite * simpleheap_suite(void)
   tc_case = tcase_create("max heap finalising timings");
   tcase_add_test(tc_case, heap_timing_function);
   suite_add_tcase(s, tc_case);
-  tc_case = tcase_create("minhash sketches");
-  tcase_add_test(tc_case, onephash_alignment_function);
-  tcase_add_test(tc_case, minhash_alignment_function);
-  suite_add_tcase(s, tc_case);
+//  tc_case = tcase_create("minhash sketches");
+//  tcase_add_test(tc_case, onephash_alignment_function);
+//  tcase_add_test(tc_case, minhash_alignment_function);
+//  suite_add_tcase(s, tc_case);
   return s;
 }
 
