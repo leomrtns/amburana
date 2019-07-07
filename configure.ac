@@ -67,19 +67,19 @@ AC_SUBST([AM_LDFLAGS])
 AC_SUBST([MPI_CXXLIBS])
 AC_SUBST([MPI_CXXFLAGS])
 
-dnl generate makefiles (last recipes, after defining CFLAGS etc.)
-AC_CONFIG_FILES([ Makefile src/Makefile tests/Makefile])
 dnl better solution is to allow arbitrary location for biomcmc-lib (it relies on ln)
 AC_CHECK_FILE([${srcdir}/biomcmc-lib],[],[ln -s submodules/biomcmc-lib ${srcdir}/biomcmc-lib])
 AC_CHECK_FILE([${srcdir}/biomcmc-lib/configure.ac],[], [AC_MSG_ERROR(["biomcmc-lib submodule missing, please git clone --recursive or link by hand to location of source code"])])
-## if line below works it means parasail is already installed, no need to compile it again from subdir                                                                                                      
+## if line below works it means parasail is already installed, no need to compile it again from subdir
 AC_CHECK_LIB(parasail, parasail_traceback_generic)
 ## autoreconf not needed on parasail if we run it here at amburana
 ### TODO: replace hardcoded libparasail location in Makefile.am by config variable set here
 dnl AC_CHECK_FILE([${srcdir}/submodules/parasail/configure.ac],[(cd ${srcdir}/submodules/parasail && autoreconf -fi)],[AC_MSG_ERROR(["could not find parasail library"])])
 # Call biomcmc-lib ./configure script recursively.
-AC_CONFIG_SUBDIRS([submodules/parasail biomcmc-lib])
+AC_CONFIG_SUBDIRS([minimap2 submodules/parasail biomcmc-lib])
 AC_SUBST([BIOMCMCLIB], [biomcmc-lib])
+dnl generate makefiles (last recipes, after defining CFLAGS etc.)
+AC_CONFIG_FILES([ Makefile minimap2/Makefile src/Makefile tests/Makefile])
 AC_OUTPUT
 
 echo \

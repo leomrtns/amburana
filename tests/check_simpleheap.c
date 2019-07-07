@@ -35,7 +35,7 @@ START_TEST(heap_timing_function)
     t_pop+= (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
     del_heap64(h64);
   }
-  printf ("average heap : %lf secs\n", t_pop/(double)(nreps));
+  printf ("average timing for top heap : %lf secs\n", t_pop/(double)(nreps));
 
   time0 = clock (); t_qsort = 0.;
   for (i=0; i < nreps; i++) {
@@ -49,7 +49,7 @@ START_TEST(heap_timing_function)
     t_qsort+= (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
     del_heap64(h64);
   }
-  printf ("average heap : %lf secs\n", t_qsort/(double)(nreps));
+  printf ("average timing for qsort : %lf secs\n", t_qsort/(double)(nreps));
   biomcmc_random_number_finalize ();
   if (t_qsort > 2 * t_pop) ck_abort_msg ("qsort implementation too slow");
 }
