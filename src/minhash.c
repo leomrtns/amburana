@@ -21,14 +21,27 @@ void del_bbit_minhash_sketch (bbit_minhash_sketch oph);
 void bbit_minhash_sketch_insert (bbit_minhash_sketch oph, uint64_t hash);
 double bbit_minhash_sketch_distance (bbit_minhash_sketch oh1, bbit_minhash_sketch oh2, int idx_in_kmer_params);
 
-sketch_set
-new_sketch_set (kmerhash kmer, int heap_mh_size, int bbit_mh_bits)
+sketch_set  // do not allocate vectors, usefull if other functions need to know sizes
+new_sketch_set_bare_numbers_only (kmerhash kmer, int heap_mh_size, int bbit_mh_bits)
 {
-  int i;
   sketch_set sset = (sketch_set) biomcmc_malloc (sizeof (struct sketch_set_struct));
   sset->kmer = kmer; sset->kmer->ref_counter++;
   sset->n_heap_mh = kmer->n_hash/3; // this division is hardcoded, I could change it in the future
   sset->n_bbit_mh = kmer->n_hash - sset->n_heap_mh;
+  sset->heap_mh_size = heap_mh_size;
+  sset->bbit_mh_bits = bbit_mh_bits;
+  sset->heap_mh = NULL;
+  sset->bbit_mh = NULL; 
+  sset->n_distances = kmer->n_hash;
+  sset->dist = NULL;
+  return sset;
+}
+
+sketch_set
+new_sketch_set (kmerhash kmer, int heap_mh_size, int bbit_mh_bits)
+{
+  int i;
+  sketch_set sset = new_sketch_set_bare_numbers_only (kmer, heap_mh_size, bbit_mh_bits);
   sset->heap_mh = (heap_minhash_sketch*) biomcmc_malloc (sset->n_heap_mh * sizeof (heap_minhash_sketch));
   sset->bbit_mh = (bbit_minhash_sketch*) biomcmc_malloc (sset->n_bbit_mh * sizeof (bbit_minhash_sketch));
   for (i=0; i < sset->n_heap_mh; i++) {
@@ -39,7 +52,7 @@ new_sketch_set (kmerhash kmer, int heap_mh_size, int bbit_mh_bits)
     sset->bbit_mh[i] = new_bbit_minhash_sketch (kmer, bbit_mh_bits);
     sset->i_bbit[i] = i + sset->n_heap_mh;
   }
-  sset->dist = (double*) biomcmc_malloc (kmer->n_hash * sizeof (double));
+  sset->dist = (double*) biomcmc_malloc (sset->n_distances * sizeof (double));
   return sset;
 }
 
@@ -74,7 +87,7 @@ new_sketch_set_from_dna (char *dna, size_t dna_length, kmerhash kmer, int heap_m
 }
 
 void
-compare_sketch_set (sketch_set ss1, sketch_set ss2)
+sketch_set_compare (sketch_set ss1, sketch_set ss2)
 {
   int i;
   if (ss1->kmer != ss2->kmer) biomcmc_error ("Sketch sets were initialised from different kmerhash_struct::");

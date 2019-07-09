@@ -1,9 +1,8 @@
 #include <amburana.h>
-//#include "simple_heap.c"
-//#include "minhash.c"
-#include <minimap.h>
+//#include <minimap.h>
 //#include "parasail/matrices/nuc44.h"
 
+/* not an actual check, but  originally a pilot version of amburana which returns several kmer-based distances */
 typedef struct
 {
   struct arg_lit  *help;
@@ -35,7 +34,7 @@ get_parameters_from_argv (int argc, char **argv)
   void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.end};
   params.argtable = argtable; 
   params.sketch->ival[0] = 64; // default (must be before parsing)
-  params.nbits->ival[0] = 8; // default (must be before parsing)
+  params.nbits->ival[0] = 5; // default (must be before parsing)
   params.kmerset->ival[0] = 2;
   /* actual parsing: */
   if (arg_nullcheck(params.argtable)) biomcmc_error ("Problem allocating memory for the argtable (command line arguments) structure");
@@ -83,34 +82,27 @@ print_usage (arg_parameters params, char *progname)
 int
 main (int argc, char **argv)
 {
-  int i, j, k;
+  int i,j,k;
   sketch_distance_gen sd;
   distance_generator dg;
   kmerhash kmer;
   alignment aln;
-  optics_cluster oc;
-  char *iscore[]={"     ","core "};
 
   arg_parameters params = get_parameters_from_argv (argc, argv);
-  kmer = new_kmerhash (params.kmerset->ival[0]); 
+  kmer = new_kmerhash (params.kmerset->ival[0]);
 
   aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
   sd = new_sketch_distance_gen (aln, kmer, params.sketch->ival[0], params.nbits->ival[0]);
   dg = new_distance_generator_from_sketch_set (sd);
-  oc = new_optics_cluster (aln->ntax);
 
-  for (k=0; k < dg->n_distances; k++) {
-    distance_generator_set_which_distance(dg, k);
-    optics_cluster_run (oc, dg, 2, 0.6, 0.1);
-    for (i=-1; i < oc->n_clusters; i++) {
-      printf ("<k=%d> cluster %d:\n", k, i);
-      for (j=0; j < oc->n_samples; j++) if (oc->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)oc->core[j]], aln->taxlabel->string[j], oc->reach_distance[j]);
-    }
+  for (i=1; i < aln->ntax; i++) for (j=0; j < i; j++) {
+    printf ("\n%38s %38s ", aln->taxlabel->string[j], aln->taxlabel->string[i]);
+
+    for (k=0; k < dg->n_distances; k++) printf ("%9.7lf ", distance_generator_get_at_distance (dg, i, j, k));
   }
 
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
 
-  del_optics_cluster (oc);
   del_alignment (aln);
   del_sketch_distance_gen (sd);
   del_distance_generator (dg);

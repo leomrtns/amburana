@@ -3,6 +3,7 @@
 #include "minhash.h"
 #include "simple_heap.h"
 #include "config.h"
+#include "sketch_distance.h"
 //#include "edlib.h"
 //#include <parasail.h>
 #endif
