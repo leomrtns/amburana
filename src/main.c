@@ -101,11 +101,12 @@ main (int argc, char **argv)
 
   for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance(dg, k);
-    optics_cluster_run (oc, dg, 2, 0.6, 0.1);
+    optics_cluster_run (oc, dg, 2, 0.3, 0.19);
     for (i=-1; i < oc->n_clusters; i++) {
       printf ("<k=%d> cluster %d:\n", k, i);
       for (j=0; j < oc->n_samples; j++) if (oc->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)oc->core[j]], aln->taxlabel->string[j], oc->reach_distance[j]);
     }
+//    for (j=0; j < oc->n_samples; j++) printf ("%2d %lf %lf\n",oc->cluster[ oc->order[j] ], oc->reach_distance[ oc->order[j] ], oc->core_distance[ oc->order[j] ]);
   }
 
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
