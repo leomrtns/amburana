@@ -1,7 +1,8 @@
 #include "simple_heap.h" 
 
 /* max heap structure for storing smallest hash values 
- * code inspired by https://gist.github.com/vgoel30/5d81e6abf9464930c1e126dab04d5be3  */
+ * code inspired by https://gist.github.com/vgoel30/5d81e6abf9464930c1e126dab04d5be3  
+ * and also for creating kNN of points for clustering (max heap as priority queue storing distances) */
 
 uint64_t heap64_get_maximum (heap64 h64) { return h64->hash[1]; }
 
@@ -20,10 +21,7 @@ new_heap64 (int heap_size)
 void
 del_heap64 (heap64 h64)
 {
-  if (h64) {
-    if (h64->hash) free (h64->hash);
-    free (h64);
-  }
+  if (h64) { if (h64->hash) free (h64->hash); free (h64); }
 }
 
 uint64_t 
@@ -101,3 +99,57 @@ heap64_finalise_heap_qsort (heap64 h64)
   h64->hash = (uint64_t*) biomcmc_realloc ((uint64_t*) h64->hash, h64->n * sizeof (uint64_t));
   h64->heap_size = h64->n;
 }
+
+heap_pqueue 
+new_heap_pqueue (int heap_size)
+{
+  int i;
+  heap_pqueue pq = (heap_pqueue) biomcmc_malloc (sizeof (struct heap64_struct)); 
+  pq->n = 0;
+  pq->heap_size = (heap_size < 2 ? 2: heap_size);
+  pq->item = (hpq_item_struct*) biomcmc_malloc ((pq->heap_size + 1) * sizeof (hpq_item_struct));
+  for(i = 0; i < pq->heap_size + 1; i++) { pq->item[i].id = 0; pq->item[i].priority = 0.; pq->item[i].v = NULL; }
+  return pq;
+}
+
+void
+del_heap_queue (heap_queue pq)
+{
+  if (pq) { if (pq->item) free (pq->item); free (pq); }
+}
+
+hpq_item_struct
+heap_pqueue_get_maximum (heap_pqueue pq) { return pq->item[1]; }
+
+hpq_item_struct
+heap_pqueue_remove_maximum (heap_pqueue pq) // a.k.a. pop() 
+{
+  hpq_item_struct max = pq->item[1]; //the root is the maximum element
+  if (pq->n == 0) return 0UL;
+  pq->item[1] = pq->item[pq->n]; // replace the element at the top with last element in the heap
+  pq->n--; 
+  heap_pqueue_bubble_down (pq, 1);
+  return max;
+}
+
+void 
+heap_pqueue_insert (heap_queue pq, hpq_item_struct item) 
+{
+  if (pq->n == pq->heap_size) { // replace if smaller than maximum
+    if (item.priority < pq->item[1].priority) { 
+      pq->item[1].id = item.id; 
+      pq->item[1].priority = item.priority; 
+      pq->item[1].v = item.v; 
+      heap_pqueue_bubble_down (pq, 1); 
+    }
+  }
+  else { // regular insert (a.k.a. push)
+    pq->n++;
+    pq->item[pq->n].id = item.id;
+    pq->item[pq->n].priority = item.priority;
+    pq->item[pq->n].v = item.v;
+    heap_pqueue_bubble_up (pq, pq->n);
+  }
+}
+
+

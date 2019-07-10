@@ -7,7 +7,7 @@
  */
 
 /*! \file simple_heap.h 
- *  \brief Max heap structure for storing smallest hash values 
+ *  \brief Max heap structure for storing smallest hash values, and for creating graph neighbourhood 
  * code inspired by https://gist.github.com/vgoel30/5d81e6abf9464930c1e126dab04d5be3  
  */
 #ifndef _simple_heap_h_ 
@@ -15,10 +15,22 @@
 #include <biomcmc.h>
 
 typedef struct heap64_struct* heap64;
+typedef struct heap_pqueue_struct* heap_pqueue;
 
 struct heap64_struct {
   uint64_t *hash;
   int heap_size, n; // size allocated to heap vector, and n=currently existing elements 
+};
+
+typedef struct {
+  int id; 
+  double priority; 
+  void *v; // extra information, currently NULL 
+} hpq_item_struct;
+
+struct heap_pqueue_struct {
+  hpq_item_struct *item; 
+  int heap_size, n;
 };
 
 heap64 new_heap64 (int heap_size);
