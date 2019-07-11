@@ -106,7 +106,8 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libamburana_la_LIBADD =
 am__objects_1 =
-am__objects_2 = simple_heap.lo minhash.lo sketch_distance.lo
+am__objects_2 = simple_heap.lo minhash.lo sketch_distance.lo \
+	goptics_cluster.lo
 am_libamburana_la_OBJECTS = $(am__objects_1) $(am__objects_2)
 libamburana_la_OBJECTS = $(am_libamburana_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -320,8 +321,8 @@ top_srcdir = @top_srcdir@
 #LDADD = $(GTKDEPS_LIBS) ../submodules/parasail/libparasail.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
 AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../minimap2/  -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
 LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  ../minimap2/libminimap2.la $(AM_LDFLAGS)
-common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h
-common_src = simple_heap.c minhash.c sketch_distance.c
+common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h goptics_cluster.h
+common_src = simple_heap.c minhash.c sketch_distance.c goptics_cluster.c
 noinst_LTLIBRARIES = libamburana.la   ## change to noinst_LT... if should be linked statically (not installed globally)
 libamburana_la_SOURCES = config.h $(common_headers) $(common_src) 
 amburana_SOURCES = main.c config.h 
@@ -451,6 +452,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/amburana-main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/goptics_cluster.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minhash.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/simple_heap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sketch_distance.Plo@am__quote@
