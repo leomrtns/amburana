@@ -54,7 +54,9 @@ sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *resul
   sketch_distance_gen sd = (sketch_distance_gen) data;
   /* we only extract kmer set when distance is needed for the first time */
   time0 = clock ();
+#ifdef _OPENMP
 #pragma omp critical
+#endif
    {
     if (!sd->sset[sample1]) sd->sset[sample1] = new_sketch_set_from_dna (sd->aln->character->string[sample1], sd->aln->character->nchars[sample1], 
                                                                          sd->sset_zero->kmer, sd->sset_zero->heap_mh_size, sd->sset_zero->bbit_mh_bits);

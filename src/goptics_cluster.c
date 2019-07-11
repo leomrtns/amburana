@@ -113,7 +113,8 @@ assign_goptics_clusters (goptics_cluster gop, double cluster_eps)
 {
   int i, j, cluster = 0;
   for(j = 0; j < gop->d->n_samples; j++) {
-    i = gop->order[j];
+   // i = gop->order[j];
+    i = j;
     if ((gop->reach_distance[i] > cluster_eps) && (gop->core_distance[i] <= cluster_eps)) {
       cluster++;
       gop->cluster[i] = cluster;
@@ -146,7 +147,7 @@ expand_cluster_order (goptics_cluster gop, point *current)
 static void
 update_results_from_current_point (goptics_cluster gop, point *current)
 {
-  gop->order[current->id] = gop->n_order++; 
+  gop->order[gop->n_order++] = current->id;
   if (current->coreDist != DBL_MAX) {
     gop->core_distance[current->id] = current->coreDist;
     gop->reach_distance[current->id] = current->reachDist;
@@ -259,7 +260,9 @@ generate_graph_multithread (goptics_cluster gop)
 {
   edgearray_item *Ea;
   int i, n_neighbours = 0, neighbour_list = 0;
+#ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
+#endif
   for(i = 0; i < gop->d->n_samples; i++) aux_generate_Va_n (gop, i);
 
   gop->Va_i[0] = 0;
@@ -270,7 +273,9 @@ generate_graph_multithread (goptics_cluster gop)
   }
   Ea = (edgearray_item*) biomcmc_malloc ((sizeof (edgearray_item) * gop->num_edges));
 
+#ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
+#endif
   for(i=0; i < gop->d->n_samples; ++i) {
     int idx = i, j; // declared here to avoid race condition
     double de;

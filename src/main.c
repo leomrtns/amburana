@@ -96,7 +96,7 @@ main (int argc, char **argv)
   distance_generator dg;
   kmerhash kmer;
   alignment aln;
-//  optics_cluster oc;
+  optics_cluster oc;
   goptics_cluster gop;
   char *iscore[]={"     ","core "};
 
@@ -106,20 +106,24 @@ main (int argc, char **argv)
   aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
   sd = new_sketch_distance_gen (aln, kmer, params.sketch->ival[0], params.nbits->ival[0]);
   dg = new_distance_generator_from_sketch_set (sd);
-  //oc = new_optics_cluster (aln->ntax);
+  oc = new_optics_cluster (aln->ntax);
 
   //for (k=0; k < dg->n_distances; k++) {
   for (k=0; k < 1; k++) {
     distance_generator_set_which_distance (dg, k);
-    //optics_cluster_run (oc, dg, params.minsamp->ival[0], params.epsilon->dval[0], params.epsilon->dval[0]);
+    optics_cluster_run (oc, dg, params.minsamp->ival[0], params.epsilon->dval[0], 0.1 * params.epsilon->dval[0]);
     gop = new_goptics_cluster_run (dg, params.minsamp->ival[0], params.epsilon->dval[0]);
-    assign_goptics_clusters (gop, params.epsilon->dval[0]);
+    assign_goptics_clusters (gop, 0.1 * params.epsilon->dval[0]);
     for (i=-1; i < gop->n_clusters; i++) {
-      printf ("<k=%d> cluster %d:\n", k, i);
-      for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j]);
+      printf ("k=%d  OC  cluster %d:\n", k, i);
+      for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)gop->core[j]], aln->taxlabel->string[gop->order[j]], gop->reach_distance[j]);
     }
-    printf("DEBUG::\n");
-    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
+    for (i=-1; i < oc->n_clusters; i++) {
+      printf ("k=%d  GOP  cluster %d:\n", k, i);
+      for (j=0; j < oc->n_samples; j++) if (oc->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)oc->core[j]], aln->taxlabel->string[oc->order[j]], oc->reach_distance[j]);
+    }
+//    printf("DEBUG::\n");
+//    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
 
   del_goptics_cluster (gop); // recreated every time
   }
