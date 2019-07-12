@@ -34,6 +34,7 @@ new_goptics_cluster (distance_generator dg, int min_points, double epsilon)
   goptics_cluster gop = (goptics_cluster) biomcmc_malloc (sizeof (struct goptics_cluster_struct));
   gop->d = dg; dg->ref_counter++;
   gop->epsilon = epsilon;
+  if (min_points > dg->n_samples) min_points = dg->n_samples;
   gop->min_points = min_points;
   gop->n_order = 0;
   gop->max_distance = -1.;
@@ -87,8 +88,9 @@ new_goptics_cluster_run (distance_generator dg, int min_points, double epsilon)
   edgearray_item *Ea = NULL;
   PriorityQueue *heap = NULL;
   point *points = NULL;
+  clock_t time1, time0;
 //  if ((gop->Ea != NULL) || (gop->heap != NULL)) biomcmc_error ("goptics_cluster_run() was called before; please now use rerun() instead.");
-
+  time0 = clock ();
   heap = createHeap (gop->d->n_samples);
   points = (point*) biomcmc_malloc (gop->d->n_samples * sizeof (point));
   for(i = 0; i < gop->d->n_samples; ++i) {
@@ -105,20 +107,24 @@ new_goptics_cluster_run (distance_generator dg, int min_points, double epsilon)
   gop->points = (point*) points;
 
   for (i = 0; i < gop->d->n_samples; ++i) if (!points[i].processed) expand_cluster_order (gop, &points[i]);
+  time1 = clock (); gop->timing_secs += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); 
   return gop;
 }
 
 void
 assign_goptics_clusters (goptics_cluster gop, double cluster_eps)
 {
-  int i, j, cluster = 0;
+  int i, j, cluster = -1;
+  if (cluster_eps > 0.999 * gop->epsilon) cluster_eps = 0.999 * gop->epsilon;
   for(j = 0; j < gop->d->n_samples; j++) {
-   // i = gop->order[j];
-    i = j;
-    if ((gop->reach_distance[i] > cluster_eps) && (gop->core_distance[i] <= cluster_eps)) {
+    i = gop->order[j]; // only place that uses it is cluster[i] (others must be ordered by point *current)
+    if (gop->reach_distance[j] > cluster_eps) { 
+      if (gop->core_distance[j] <= cluster_eps) {
       cluster++;
       gop->cluster[i] = cluster;
-    }
+      }
+      else gop->cluster[i] = -1;
+    } 
     else gop->cluster[i] = cluster;
   }
   gop->n_clusters = cluster + 1;
@@ -147,24 +153,23 @@ expand_cluster_order (goptics_cluster gop, point *current)
 static void
 update_results_from_current_point (goptics_cluster gop, point *current)
 {
-  gop->order[gop->n_order++] = current->id;
-  if (current->coreDist != DBL_MAX) {
-    gop->core_distance[current->id] = current->coreDist;
-    gop->reach_distance[current->id] = current->reachDist;
-    gop->core[current->id] = true;
-  }
-  else {
-    gop->core_distance[current->id] = gop->reach_distance[current->id] = 1.01 * gop->max_distance;
-    gop->core[current->id] = false;
-  }
+  gop->order[gop->n_order] = current->id; // cannot update on [current->id] directly since last pass is in order of *current
+  gop->core_distance[gop->n_order] = current->coreDist;
+  gop->reach_distance[gop->n_order] = current->reachDist;
+  /* just cosmetic change, to replace DBL_MAX values */
+  if (gop->reach_distance[gop->n_order] > gop->max_distance) gop->reach_distance[gop->n_order] = 2 * gop->max_distance;
+  if (gop->core_distance[gop->n_order] > gop->max_distance) gop->core_distance[gop->n_order] = 2 * gop->max_distance;
+  if (current->coreDist < gop->epsilon) gop->core[gop->n_order] = true;
+  else  gop->core[gop->n_order] = false;
+  gop->n_order++;
 }
 
 static void 
 set_core_dist (goptics_cluster gop, point *current)
 { 
   edgearray_item *Ea = (edgearray_item*) gop->Ea; // gop->Ea is type void
-  if ((gop->Va_n[current->id] >=  gop->min_points - 1) && (gop->min_points <= gop->d->n_samples)) { // If enough neighbours
-    qsort (&(Ea[gop->Va_i[current->id]]), gop->Va_n[current->id], sizeof (edgearray_item), compare_edgearray_item_increasing);
+  if (gop->Va_n[current->id] >=  gop->min_points - 1) { // If enough neighbours (and we always have min_points <= n_samples)
+    qsort ((void*) &(Ea[gop->Va_i[current->id]]), gop->Va_n[current->id], sizeof (edgearray_item), compare_edgearray_item_increasing);
     current->coreDist = Ea[gop->Va_i[current->id] + gop->min_points - 2].distance; // -2 in Ea b/c itself was not counted as neighbour
   } else current->coreDist = DBL_MAX;
 }
@@ -188,7 +193,7 @@ order_seeds_update (goptics_cluster gop, point *this)
         p->reachDist = newrdist;
         insertHeap (heap, p);
       } else {
-        if(newrdist < p->reachDist){ // if already in heap, update reachDist
+        if (newrdist < p->reachDist){ // if already in heap, update reachDist
           p->reachDist = newrdist;
           promoteElementHeap (heap, p->pqPos);
         }
@@ -222,12 +227,12 @@ generate_graph (goptics_cluster gop)
 
   Ea = (edgearray_item*) biomcmc_malloc ((sizeof (edgearray_item) * gop->num_edges));
 
-  for(i = 0; i < gop->d->n_samples; i++) {	
+  for (i = 0; i < gop->d->n_samples; i++) {	
     gop->Va_i[i] = auxEa;
     gop->Va_n[i] = 0;
     for(j = 0; j < gop->d->n_samples; ++j) if (i != j) {
       de = distance_generator_get (gop->d, i, j);
-      if(de <= gop->epsilon) {
+      if (de <= gop->epsilon) {
         Ea[auxEa].id = j;
         Ea[auxEa].distance = de;
         auxEa += 1;
@@ -249,7 +254,6 @@ aux_generate_Va_n (goptics_cluster gop, int idx)
   gop->Va_n[idx] = 0;
   for(i = 0; i < gop->d->n_samples; ++i) if (idx != i) {
     de = distance_generator_get (gop->d, i, idx);
-    printf ("y1 %d %d %lf\n", i, idx, de);
     if (de > gop->max_distance) gop->max_distance = de;
     if ( de <=  gop->epsilon) gop->Va_n[idx] += 1;
   }
@@ -282,7 +286,6 @@ generate_graph_multithread (goptics_cluster gop)
     int pointer = gop->Va_i[idx];
     if (gop->Va_n[idx] > 0) for (j = 0; j < gop->d->n_samples; ++j) if (idx != j) {
       de = distance_generator_get (gop->d, j, idx); // original has i, idx
-      printf ("y2 %d %d %lf \n", j, idx, de);
       if (de > gop->max_distance) gop->max_distance = de;
       if ( de <=  gop->epsilon) {
         Ea[pointer].id = j;
@@ -328,7 +331,7 @@ static int insertHeap (PriorityQueue *heap, point *p)
 
 static void promoteElementHeap (PriorityQueue *heap, int child) 
 {
-  int parent = (child - 1)/2; // biomcmc default heap has chid/2 
+  int parent = (child - 1)/2; // biomcmc default heap has child/2 
   element temp;
   // if child == 0 (first insertion)  we do nothing
   while((child > 0) && (heap->pq[parent].p->reachDist > heap->pq[child].p->reachDist)){
@@ -337,7 +340,7 @@ static void promoteElementHeap (PriorityQueue *heap, int child)
     heap->pq[parent] = temp;
     heap->pq[child].p->pqPos = child;
     heap->pq[parent].p->pqPos = parent;
-    parent = parent;
+    child = parent;
     parent = (parent - 1) / 2;
   }
   if(child != heap->pq[child].p->pqPos) biomcmc_error ("could not promote OPTICS MinHeap element");

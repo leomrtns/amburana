@@ -38,11 +38,11 @@ get_parameters_from_argv (int argc, char **argv)
   };
   void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.minsamp, params.epsilon, params.end};
   params.argtable = argtable; 
-  params.sketch->ival[0] = 64; // default (must be before parsing)
-  params.nbits->ival[0] = 8; // default (must be before parsing)
-  params.kmerset->ival[0] = 2;
+  params.sketch->ival[0] = 256; // default (must be before parsing)
+  params.nbits->ival[0] = 10; // default (must be before parsing)
+  params.kmerset->ival[0] = 3;
   params.minsamp->ival[0] = 2;
-  params.epsilon->dval[0] = 2.;
+  params.epsilon->dval[0] = 1.;
   /* actual parsing: */
   if (arg_nullcheck(params.argtable)) biomcmc_error ("Problem allocating memory for the argtable (command line arguments) structure");
   arg_parse (argc, argv, params.argtable); // returns >0 if errors were found, but this info also on params.end->count
@@ -98,6 +98,8 @@ main (int argc, char **argv)
   alignment aln;
   optics_cluster oc;
   goptics_cluster gop;
+  clock_t time0, time1;
+  double timing1 = 0., timing2 = 0.;
   char *iscore[]={"     ","core "};
 
   arg_parameters params = get_parameters_from_argv (argc, argv);
@@ -108,29 +110,35 @@ main (int argc, char **argv)
   dg = new_distance_generator_from_sketch_set (sd);
   oc = new_optics_cluster (aln->ntax);
 
-  //for (k=0; k < dg->n_distances; k++) {
-  for (k=0; k < 1; k++) {
+  time0 = clock ();
+  for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance (dg, k);
     optics_cluster_run (oc, dg, params.minsamp->ival[0], params.epsilon->dval[0], 0.1 * params.epsilon->dval[0]);
+    if (k) time1 = clock (); timing1 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
+
     gop = new_goptics_cluster_run (dg, params.minsamp->ival[0], params.epsilon->dval[0]);
     assign_goptics_clusters (gop, 0.1 * params.epsilon->dval[0]);
+    if (k) time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
+
     for (i=-1; i < gop->n_clusters; i++) {
-      printf ("k=%d  OC  cluster %d:\n", k, i);
-      for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)gop->core[j]], aln->taxlabel->string[gop->order[j]], gop->reach_distance[j]);
-    }
-    for (i=-1; i < oc->n_clusters; i++) {
       printf ("k=%d  GOP  cluster %d:\n", k, i);
-      for (j=0; j < oc->n_samples; j++) if (oc->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)oc->core[j]], aln->taxlabel->string[oc->order[j]], oc->reach_distance[j]);
+      for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) 
+        printf (" %s %50s \t %7.5lf    %7.5lf\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j], gop->core_distance[j]);
     }
+//    for (i=-1; i < oc->n_clusters; i++) {
+//      printf ("k=%d  OC  cluster %d:\n", k, i);
+//      for (j=0; j < oc->n_samples; j++) if (oc->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)oc->core[j]], aln->taxlabel->string[j], oc->reach_distance[j]);
+//    }
 //    printf("DEBUG::\n");
 //    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
-
-  del_goptics_cluster (gop); // recreated every time
+    del_goptics_cluster (gop); // recreated every time
   }
-
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
+  fprintf (stderr, "average time for OPTICS : %lf \t and for gOPTICS: %lf (excluding distance calculation)\n", 
+           timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
+  fprintf (stderr, "timing for gOPTICS as given internally:  %lf \n",  gop->timing_secs/(double)(dg->n_distances));
 
-  //del_optics_cluster (oc);
+  del_optics_cluster (oc);
   del_alignment (aln);
   del_sketch_distance_gen (sd);
   del_distance_generator (dg);

@@ -33,9 +33,9 @@ get_parameters_from_argv (int argc, char **argv)
   };
   void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.end};
   params.argtable = argtable; 
-  params.sketch->ival[0] = 64; // default (must be before parsing)
-  params.nbits->ival[0] = 5; // default (must be before parsing)
-  params.kmerset->ival[0] = 2;
+  params.sketch->ival[0] = 256; // default (must be before parsing)
+  params.nbits->ival[0] = 10; // default (must be before parsing)
+  params.kmerset->ival[0] = 3;
   /* actual parsing: */
   if (arg_nullcheck(params.argtable)) biomcmc_error ("Problem allocating memory for the argtable (command line arguments) structure");
   arg_parse (argc, argv, params.argtable); // returns >0 if errors were found, but this info also on params.end->count
@@ -67,8 +67,7 @@ print_usage (arg_parameters params, char *progname)
     printf ("Error when reading arguments from command line\n\n");
   }
 
-  printf ("%s \n", PACKAGE_STRING);
-  printf ("Just testing at the moment. Move along, nothing to see here!\n");
+  printf ("Testing functions. Move along, nothing to see here!\n");
   printf ("The complete syntax is:\n\n %s ", basename(progname));
   arg_print_syntaxv (stdout, params.argtable, "\n\n");
   arg_print_glossary(stdout, params.argtable,"  %-32s %s\n");

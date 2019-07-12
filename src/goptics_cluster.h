@@ -21,10 +21,11 @@ struct goptics_cluster_struct
   int *Va_i, *Va_n; // Va_i[pts] where starts at Ea_ids and Ea_dist list; va_n[pts] = number of neighbours <both opaque>
   double epsilon; 
   int min_points, num_edges, n_clusters; // minpts from user, num_edges = number of dists < epsilon 
-  int *cluster, *order, n_order; // samples sorted by reachability order, and resulting cluster number
+  int *order, n_order, *cluster; // samples sorted by reachability order, and cluster= ordered cluster number (i.e. cluster[i] corresponds to seq[i])
   double *core_distance, *reach_distance, max_distance; // max_dist is a convenience number to replace DBL_MAX in output
   bool *core;
   void *Ea, *heap, *points; // void b/c I don't want to expose local structs
+  double timing_secs;
   distance_generator d; // d->n_samples 
 };
 
