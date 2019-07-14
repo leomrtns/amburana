@@ -1,6 +1,4 @@
 #include <amburana.h>
-//#include "simple_heap.c"
-//#include "minhash.c"
 #include <minimap.h>
 //#include "parasail/matrices/nuc44.h"
 
@@ -96,8 +94,8 @@ main (int argc, char **argv)
   distance_generator dg;
   kmerhash kmer;
   alignment aln;
-  optics_cluster oc;
   goptics_cluster gop;
+  affineprop_cluster ap;
   clock_t time0, time1;
   double timing1 = 0., timing2 = 0.;
   char *iscore[]={"     ","core "};
@@ -108,37 +106,35 @@ main (int argc, char **argv)
   aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
   sd = new_sketch_distance_gen (aln, kmer, params.sketch->ival[0], params.nbits->ival[0]);
   dg = new_distance_generator_from_sketch_set (sd);
-  oc = new_optics_cluster (aln->ntax);
+  ap = new_affineprop_cluster (dg);
 
-  time0 = clock ();
   for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance (dg, k);
-    optics_cluster_run (oc, dg, params.minsamp->ival[0], params.epsilon->dval[0], 0.1 * params.epsilon->dval[0]);
-    if (k) time1 = clock (); timing1 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-
+    time0 = clock ();
     gop = new_goptics_cluster_run (dg, params.minsamp->ival[0], params.epsilon->dval[0]);
     assign_goptics_clusters (gop, 0.1 * params.epsilon->dval[0]);
-    if (k) time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
+    time1 = clock (); timing1 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
 
     for (i=-1; i < gop->n_clusters; i++) {
       printf ("k=%d  GOP  cluster %d:\n", k, i);
       for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) 
         printf (" %s %50s \t %7.5lf    %7.5lf\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j], gop->core_distance[j]);
     }
-//    for (i=-1; i < oc->n_clusters; i++) {
-//      printf ("k=%d  OC  cluster %d:\n", k, i);
-//      for (j=0; j < oc->n_samples; j++) if (oc->cluster[j] == i) printf ("\t%s %55s \t %8.12e\n",iscore[(int)oc->core[j]], aln->taxlabel->string[j], oc->reach_distance[j]);
-//    }
-//    printf("DEBUG::\n");
-//    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
+    affineprop_run (ap, 100, 0.9);
+    time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
+    printf ("k=%d Affine  cluster:\n", k);
+    for (j=0; j < gop->d->n_samples; j++)
+      printf ("%3d %50s %50s\n", j, aln->taxlabel->string[j], aln->taxlabel->string[ ap->cluster[j] ]);
+
+    //    printf("DEBUG::\n");
+    //    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
     del_goptics_cluster (gop); // recreated every time
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
-  fprintf (stderr, "average time for OPTICS : %lf \t and for gOPTICS: %lf (excluding distance calculation)\n", 
-           timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
+  fprintf (stderr, "average time for gOPTICS: %lf (excluding distance calculation)\n", timing1/(double)(dg->n_distances));
   fprintf (stderr, "timing for gOPTICS as given internally:  %lf \n",  gop->timing_secs/(double)(dg->n_distances));
 
-  del_optics_cluster (oc);
+  del_affineprop_cluster (ap);
   del_alignment (aln);
   del_sketch_distance_gen (sd);
   del_distance_generator (dg);

@@ -4,7 +4,8 @@
 #include "simple_heap.h"
 #include "config.h"
 #include "sketch_distance.h"
-#include "goptics_cluster.h"
+#include "clustering_affineprop.h"
+
 //#include "edlib.h"
 //#include <parasail.h>
 #endif

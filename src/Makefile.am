@@ -5,8 +5,8 @@ LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  ../minimap2/libminima
 AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@
 ## TODO: libparasail should not be hardcoded here, should be set by configure
 
-common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h goptics_cluster.h
-common_src     = simple_heap.c minhash.c sketch_distance.c goptics_cluster.c
+common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h clustering_affineprop.h
+common_src     = simple_heap.c minhash.c sketch_distance.c clustering_affineprop.c
 
 noinst_LTLIBRARIES = libamburana.la   ## change to noinst_LT... if should be linked statically (not installed globally)
 libamburana_la_SOURCES = config.h $(common_headers) $(common_src) 
