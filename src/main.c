@@ -116,16 +116,17 @@ main (int argc, char **argv)
     time1 = clock (); timing1 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
 
     for (i=-1; i < gop->n_clusters; i++) {
-      printf ("k=%d  GOP  cluster %d:\n", k, i);
+      printf ("\t\t\t\t k=%d  GOP  cluster %d:\n", k, i);
       for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) 
-        printf (" %s %50s \t %7.5lf    %7.5lf\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j], gop->core_distance[j]);
+        printf (" %s %-40s \t %7.5lf    %7.5lf\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j], gop->core_distance[j]);
     }
-    affineprop_run (ap, 100, 0.9);
+    affineprop_run (ap, 200, 0.6, 0.5); // n_iter, preference (in quantile), damping (weight of previous iteration)
     time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-    printf ("k=%d Affine  cluster:\n", k);
-    for (j=0; j < gop->d->n_samples; j++)
-      printf ("%3d %50s %50s\n", j, aln->taxlabel->string[j], aln->taxlabel->string[ ap->cluster[j] ]);
-
+    for (i=0; i < ap->n_clusters; i++) {
+      printf ("\t\t\t\t k=%2d Affine  cluster %2d: convergence: %3d exemplar :: %s\n", k, i, ap->n_converging, aln->taxlabel->string[ ap->exemplars[i] ]);
+      for (j=0; j < ap->d->n_samples; j++) if (ap->cluster[j] == i) 
+        printf ("%3d %-40s \n", j, aln->taxlabel->string[j]);
+    }
     //    printf("DEBUG::\n");
     //    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
     del_goptics_cluster (gop); // recreated every time

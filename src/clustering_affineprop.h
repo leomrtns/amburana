@@ -17,14 +17,16 @@ typedef struct affineprop_cluster_struct* affineprop_cluster;
 
 struct affineprop_cluster_struct
 {
-  double *A, *R, *S;
-  double preference;
-  int *cluster, n_clusters;
+  double *A, *R, *S, *tmp;
+  double *pref;
+  int *cluster, *exemplars, n_clusters; /*!< \brief cluster[n_samples], exemplars[n_clusters], with exemplars[ cluster[i] ] giving exemplar for sample i */
+  int n_converging;
   distance_generator d;
+  rng_tt800_struct tt800;
 };
 
 affineprop_cluster new_affineprop_cluster (distance_generator dg);
 void del_affineprop_cluster (affineprop_cluster ap);
-void affineprop_run (affineprop_cluster ap, int iterations, double quantile);
+void affineprop_run (affineprop_cluster ap, int iterations, double quantile, double lambda);
 
 #endif
