@@ -111,6 +111,7 @@ main (int argc, char **argv)
   for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance (dg, k);
     time0 = clock ();
+
     gop = new_goptics_cluster_run (dg, params.minsamp->ival[0], params.epsilon->dval[0]);
     assign_goptics_clusters (gop, 0.1 * params.epsilon->dval[0]);
     time1 = clock (); timing1 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
@@ -120,20 +121,21 @@ main (int argc, char **argv)
       for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) 
         printf (" %s %-40s \t %7.5lf    %7.5lf\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j], gop->core_distance[j]);
     }
+    del_goptics_cluster (gop); // recreated every time
+
     affineprop_run (ap, 200, 0.6, 0.5); // n_iter, preference (in quantile), damping (weight of previous iteration)
     time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
+
     for (i=0; i < ap->n_clusters; i++) {
       printf ("\t\t\t\t k=%2d Affine  cluster %2d: convergence: %3d exemplar :: %s\n", k, i, ap->n_converging, aln->taxlabel->string[ ap->exemplars[i] ]);
       for (j=0; j < ap->d->n_samples; j++) if (ap->cluster[j] == i) 
         printf ("%3d %-40s \n", j, aln->taxlabel->string[j]);
     }
-    //    printf("DEBUG::\n");
-    //    for (j=0; j < gop->d->n_samples; j++) printf ("%2d %lf %lf\n", gop->cluster[ gop->order[j] ], gop->reach_distance[ gop->order[j] ], gop->reach_distance[j]);
-    del_goptics_cluster (gop); // recreated every time
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
-  fprintf (stderr, "average time for gOPTICS: %lf (excluding distance calculation)\n", timing1/(double)(dg->n_distances));
-  fprintf (stderr, "timing for gOPTICS as given internally:  %lf \n",  gop->timing_secs/(double)(dg->n_distances));
+  fprintf (stderr, "average time for gOPTICS: %lf and for affine prop %lf \n", timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
+  fprintf (stderr, "timing for gOPTICS  %lf and affine prop %lf as given internally\n",  gop->timing_secs/(double)(dg->n_distances), ap->timing_secs/(double)(dg->n_distances));
+
 
   del_affineprop_cluster (ap);
   del_alignment (aln);

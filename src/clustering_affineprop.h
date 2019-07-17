@@ -17,8 +17,8 @@ typedef struct affineprop_cluster_struct* affineprop_cluster;
 
 struct affineprop_cluster_struct
 {
-  double *A, *R, *S, *tmp;
-  double *pref;
+  double **A, **R, **S, *tmp;
+  double *pref, timing_secs;
   int *cluster, *exemplars, n_clusters; /*!< \brief cluster[n_samples], exemplars[n_clusters], with exemplars[ cluster[i] ] giving exemplar for sample i */
   int n_converging;
   distance_generator d;
