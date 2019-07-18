@@ -9,24 +9,16 @@
 #define A_MERGER  2 /* node contains a merged pair of root clusters */
 
 #define alloc_mem(N, T) (T *) calloc(N, sizeof(T))
-#define alloc_fail(M) fprintf(stderr,                                   \
-                              "Failed to allocate memory for %s.\n", M)
-#define read_fail(M) fprintf(stderr, "Failed to read %s from file.\n", M)
-#define invalid_node(I) fprintf(stderr,                                 \
-                                "Invalid cluster node at index %d.\n", I)
 
 typedef struct cluster_s cluster_t;
 typedef struct cluster_node_s cluster_node_t;
 typedef struct neighbour_s neighbour_t;
-
-float (*distance_fptr) (float **, const int *, const int *, int, int);
 
 struct cluster_s {
   int num_items; /* number of items that was clustered */
   int num_clusters; /* current number of root clusters */
   int num_nodes; /* number of leaf and merged clusters */
   cluster_node_t *nodes; /* leaf and merged clusters */
-  float **distances; /* distance between leaves */
 };
 
 struct cluster_node_s {
@@ -36,87 +28,75 @@ struct cluster_node_s {
   coord_t centroid; /* centroid of this cluster */
   char *label; /* label of a leaf node */
   int *merged; /* indexes of root clusters merged */
-  int num_items; /* number of leaf nodes inside new cluster */
-  int *items; /* array of leaf nodes indices inside merged clusters */
+  int n_items; /* number of leaf nodes inside new cluster */
+  int *item; /* array of leaf nodes indices inside merged clusters */
   neighbour_t *neighbours; /* sorted linked list of distances to roots */
 };
 
 struct neighbour_s {
   int target; /* the index of cluster node representing neighbour */
-  float distance; /* distance between the nodes */
+  double distance; /* distance between the nodes */
+  double variance; /* LEO: store info about new cluster (Ward variance for instance)  */
   neighbour_t *next, *prev; /* linked list entries */
 };
 
-//typedef struct coord_s { float x, y; } coord_t;
-//struct item_s { coord_t coord; char label[MAX_LABEL_LEN]; };
-
+agglomerative_cluster
+new_agglomerative_cluster ()
+{
+  ag->cluster = malloc(cluster_t);
+}
 
 void
 agglomerative_cluster_run ()
 {
-  cluster_t *cluster = agglomerate(num_items, items);
+  ag->cluster_t *cluster = agglomerate(num_items, items);
   get_k_clusters(cluster, k);
 }
 
-
-float **generate_distance_matrix(int num_items, const item_t items[])
+double get_distance (agglomerative_cluster ag, int index, int target)
 {
-  float **matrix = alloc_mem(num_items, float *);
-  if (matrix) {
-    for (int i = 0; i < num_items; ++i) {
-      matrix[i] = alloc_mem(num_items, float);
-      if (!matrix[i]) {
-        alloc_fail("distance matrix row");
-        num_items = i;
-        for (i = 0; i < num_items; ++i) free(matrix[i]);
-        free(matrix);
-        matrix = NULL;
-        break;
-      }
-    }
-    if (matrix)  fill_euclidean_distances(matrix, num_items, items);
-  } else alloc_fail("distance matrix");
-  return matrix;
+  /* if both are leaves, just use the distances matrix */
+  if (index < ag->cluster->num_items && target < ag->cluster->num_items) return distance_generator_get (ag->d, index, target);
+  return ag->distance_fptr (ag, a->items, ag->cluster->nodes[index], ag->cluster->nodes[target]);
 }
 
-float single_linkage (float **distances, const int a[], const int b[], int m, int n)
+double single_linkage (agglomerative_cluster ag,  cluster_node_t *a, cluster_node_t *b)
 {
   // LEO : should receive cluster_node_t (with centroid info etc) instead of numbers
-  float min = FLT_MAX, d;
-  for (int i = 0; i < m; ++i) for (int j = 0; j < n; ++j) {
-      d = distances[a[i]][b[j]];
-      if (d < min)  min = d;
-    }
+  double min = DBL_MAX, d;
+  for (int i = 0; i < a->n_items; ++i) for (int j = 0; j < b->n_items; ++j) {
+    d = distance_generator_get (ag->d, a->item[i], b->item[j]);
+    if (d < min)  min = d;
+  }
   return min;
 }
 
-float complete_linkage (float **distances, const int a[], const int b[], int m, int n)
+double complete_linkage (agglomerative_cluster ag,  cluster_node_t *a, cluster_node_t *b)
 {
-  float d, max = 0.0 /* assuming distances are positive */;
-  for (int i = 0; i < m; ++i) for (int j = 0; j < n; ++j) {
-      d = distances[a[i]][b[j]];
-      if (d > max)  max = d;
-    }
+  double d, max = -DBL_MAX;
+  for (int i = 0; i < a->n_items; ++i) for (int j = 0; j < b->n_items; ++j) {
+    d = distance_generator_get (ag->d, a->item[i], b->item[j]);
+    if (d > max)  max = d;
+  }
   return max;
 }
-// Ward d(A,B) = sum(d(a,b))/(A+B) - sum(d(a1,a2))/A - sum(db1,b2))/B (see nearestneighbor chain on wiki)
 
-float average_linkage (float **distances, const int a[], const int b[], int m, int n)
+double average_linkage (agglomerative_cluster ag,  cluster_node_t *a, cluster_node_t *b)
 {
-  float total = 0.0;
-  for (int i = 0; i < m; ++i) for (int j = 0; j < n; ++j) total += distances[a[i]][b[j]];
-  return total / (m * n);
+  double d = 0.0;
+  for (int i = 0; i < a->n_items; ++i) for (int j = 0; j < b->n_items; ++j) d +=  distance_generator_get (ag->d, a->item[i], b->item[j]);
+  return d/ (a->n_items * b->n_items);
 }
 
-float get_distance (cluster_t *cluster, int index, int target)
+double ward_linkage (agglomerative_cluster ag,  cluster_node_t *a, cluster_node_t *b)
 {
-  /* if both are leaves, just use the distances matrix */
-  if (index < cluster->num_items && target < cluster->num_items)  return cluster->distances[index][target];
-  else {
-    cluster_node_t *a = &(cluster->nodes[index]);
-    cluster_node_t *b = &(cluster->nodes[target]);
-    return distance_fptr(cluster->distances, a->items, b->items, a->num_items, b->num_items);
+  double tmp_d, d = 0.0;
+  for (int i = 0; i < a->n_items; ++i) for (int j = 0; j < b->n_items; ++j) {
+    tmp_d = distance_generator_get (ag->d, a->item[i], b->item[j]);
+    d += (tmp_d * tmp_d);
   }
+  return  d / (a->n_items + b->n_items) - a->variance/a->n_items - b->variance/b->n_items;
+  // save d somewhere, if accepted we update it to d + a->var + b->var
 }
 
 void free_neighbours (neighbour_t *node)
@@ -145,10 +125,6 @@ void free_cluster(cluster_t * cluster)
 {
   if (cluster) {
     if (cluster->nodes) free_cluster_nodes(cluster);
-    if (cluster->distances) {
-      for (int i = 0; i < cluster->num_items; ++i) free(cluster->distances[i]);
-      free(cluster->distances);
-    }
     free(cluster);
   }
 }
@@ -265,43 +241,16 @@ cluster_t *add_leaves(cluster_t *cluster, item_t *items)
   return cluster;
 }
 
-void print_cluster_items(cluster_t *cluster, int index)
-{
-  cluster_node_t *node = &(cluster->nodes[index]);
-  fprintf(stdout, "Items: ");
-  if (node->num_items > 0) {
-    fprintf(stdout, "%s", cluster->nodes[node->items[0]].label);
-    for (int i = 1; i < node->num_items; ++i) fprintf(stdout, ", %s", cluster->nodes[node->items[i]].label);
-  }
-  fprintf(stdout, "\n");
-}
-
-void print_cluster_node(cluster_t *cluster, int index)
-{
-  cluster_node_t *node = &(cluster->nodes[index]); 
-  fprintf(stdout, "Node %d - height: %d, centroid: (%5.3f, %5.3f)\n", index, node->height, node->centroid.x, node->centroid.y);
-  if (node->label) fprintf(stdout, "\tLeaf: %s\n\t", node->label);
-  else fprintf(stdout, "\tMerged: %d, %d\n\t", node->merged[0], node->merged[1]);
-  print_cluster_items(cluster, index);
-  fprintf(stdout, "\tNeighbours: ");
-  neighbour_t *t = node->neighbours;
-  while (t) {
-    fprintf(stdout, "\n\t\t%2d: %5.3f", t->target, t->distance);
-    t = t->next;
-  }
-  fprintf(stdout, "\n");
-}
-
 void merge_items(cluster_t *cluster, cluster_node_t *node, cluster_node_t **to_merge)
 {
   node->type = A_MERGER;
   node->is_root = 1;
   node->height = -1;
-// LEO: main function to modify (replace centroid by ward's avge distance^2 between points etc) 
+  // LEO: main function to modify (replace centroid by ward's avge distance^2 between points etc) 
   /* copy leaf indexes from merged clusters */
   int k = 0, idx;
   coord_t centroid = { .x = 0.0, .y = 0.0 };
-  for (int i = 0; i < 2; ++i) {
+  for (int i = 0; i < 2; ++i) { 
     cluster_node_t *t = to_merge[i];
     t->is_root = 0; /* no longer root: merged */
     if (node->height == -1 || node->height < t->height) node->height = t->height;
@@ -357,7 +306,7 @@ cluster_node_t *merge(cluster_t *cluster, int first, int second)
 
 #undef merge_to_one
 
-void find_best_distance_neighbour(cluster_node_t *nodes, int node_idx, neighbour_t *neighbour, float *best_distance, int *first, int *second)
+void find_best_distance_neighbour(cluster_node_t *nodes, int node_idx, neighbour_t *neighbour, double *best_distance, int *first, int *second)
 {
   while (neighbour) {
     if (nodes[neighbour->target].is_root) {
@@ -375,7 +324,7 @@ void find_best_distance_neighbour(cluster_node_t *nodes, int node_idx, neighbour
 
 int find_clusters_to_merge(cluster_t *cluster, int *first, int *second)
 {
-  float best_distance = 0.0;
+  double best_distance = 0.0;
   int root_clusters_seen = 0;
   int j = cluster->num_nodes; /* traverse hierarchy top-down */
   *first = -1;
@@ -476,3 +425,31 @@ void print_cluster(cluster_t *cluster)
 {
   for (int i = 0; i < cluster->num_nodes; ++i) print_cluster_node(cluster, i);
 }
+
+void print_cluster_items(cluster_t *cluster, int index)
+{
+  cluster_node_t *node = &(cluster->nodes[index]);
+  fprintf(stdout, "Items: ");
+  if (node->num_items > 0) {
+    fprintf(stdout, "%s", cluster->nodes[node->items[0]].label);
+    for (int i = 1; i < node->num_items; ++i) fprintf(stdout, ", %s", cluster->nodes[node->items[i]].label);
+  }
+  fprintf(stdout, "\n");
+}
+
+void print_cluster_node(cluster_t *cluster, int index)
+{
+  cluster_node_t *node = &(cluster->nodes[index]); 
+  fprintf(stdout, "Node %d - height: %d, centroid: (%5.3f, %5.3f)\n", index, node->height, node->centroid.x, node->centroid.y);
+  if (node->label) fprintf(stdout, "\tLeaf: %s\n\t", node->label);
+  else fprintf(stdout, "\tMerged: %d, %d\n\t", node->merged[0], node->merged[1]);
+  print_cluster_items(cluster, index);
+  fprintf(stdout, "\tNeighbours: ");
+  neighbour_t *t = node->neighbours;
+  while (t) {
+    fprintf(stdout, "\n\t\t%2d: %5.3f", t->target, t->distance);
+    t = t->next;
+  }
+  fprintf(stdout, "\n");
+}
+
