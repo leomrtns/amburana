@@ -126,7 +126,7 @@ neighbour_t *add_neighbour(cluster_t *cluster, int index, int target)
 {
   neighbour_t *neighbour = alloc_mem (1, neighbour_t);
   neighbour->target = target;
-  neighbour->distance = get_distance_into_neighbour (cluster, neighbour, index, target);  // LEO: only called here
+  get_distance_into_neighbour (cluster, neighbour, index, target);
   cluster_node_t *node = &(cluster->nodes[index]);
   if (node->neighbours) insert_sorted(node, neighbour);  // LEO: only called here
   else node->neighbours = neighbour;
@@ -150,7 +150,6 @@ cluster_t *update_neighbours(cluster_t *cluster, int index)
 void merge_items (cluster_t *cluster, cluster_node_t *node, int ids[2])
 {
   int k = 0, idx;
-  
   node->is_leaf = false;
   node->is_root = true;
 
@@ -260,7 +259,6 @@ void free_cluster_nodes(cluster_t *cluster)
   for (int i = 0; i < cluster->num_nodes; ++i) {
     cluster_node_t *node = &(cluster->nodes[i]);
     if (node->label) free(node->label);
-    if (node->merged) free(node->merged);
     if (node->items) free(node->items);
     if (node->neighbours) free_neighbours(node->neighbours);
   }
