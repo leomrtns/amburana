@@ -23,8 +23,9 @@ struct hc_link {
 
 struct hc_cluster {
   int index_c;
+  int sample_id;
   int offset;
-  int length;
+  int len_c;
   int removed;
   hc_link_t *link;
   hc_link_t *minimum;
@@ -58,16 +59,18 @@ hc_cluster_init_zero (hc_cluster_t *clusters, int length)
   hc_cluster_t *prev;
 
   curr = &clusters[0];
-  curr->index_c = curr->offset = curr->length = curr->removed  = 0;
+  curr->index_c = curr->offset = curr->len_c = curr->removed  = 0;
   curr->minimum = curr->link = NULL;
   curr->next = curr->prev = curr->cluster = NULL;
+  curr->sample_id = -1;
   for (int i = 0; i < length; i++) {
     prev = &clusters[i];
     curr = &clusters[i + 1];
-    curr->offset = curr->length = curr->removed  = 0;
+    curr->offset = curr->len_c = curr->removed  = 0;
     curr->minimum = curr->link = NULL;
     curr->next = curr->cluster = NULL;
     curr->index_c   = i; 
+    curr->sample_id = i;
     curr->prev      = prev;
     prev->next      = curr;
   }
@@ -132,7 +135,7 @@ hierarchical_cluster_run (hierarchical_cluster hac, char linkage)
   hc_link_t *thislink = NULL, *links;
   hc_level_t *levels = (hc_level_t*) biomcmc_malloc (hac->d->n_samples * sizeof(hc_level_t));
   hc_level_t *level, *prev = NULL;
-  int offset = 0;
+  int i, offset = 0;
   clock_t time1, time0;
 
   cluster = (hc_cluster_t*) hac->clusters;
@@ -165,10 +168,18 @@ hierarchical_cluster_run (hierarchical_cluster hac, char linkage)
   hac->levels = levels;
   for (level = levels; level; level = level->next) {  
     printf("DEBUG:: %2d %2d %8.5lf\n", level->source_id, level->target_id, level->linkage);
-//    for (target = level->link->target; target->prev; target = target->prev)  printf(" - %2d ", target->index_c);
+  }
+  for (i=0; i < hac->d->n_samples+1; i++) {
+    if ((&cluster[i])->prev) printf ("prev: %2d ", (&cluster[i])->prev->sample_id);
+    else printf (" ------- ");
+    printf ("this: %2d ", (&cluster[i])->sample_id);
+    if ((&cluster[i])->next) printf ("next: %2d ", (&cluster[i])->next->sample_id);
+    else printf (" ------- ");
+    if ((&cluster[i])->cluster) printf ("cluster: %2d ", (&cluster[i])->cluster->sample_id);
+    else printf (" -------");
+    printf ("%i\n", (&cluster[i])->len_c);
   }
 }
-
 
 hc_link_t 
 *hc_link_min (hc_link_t *a, hc_link_t* b) 
@@ -182,7 +193,8 @@ hc_link_t
 double
 hc_average_linkage (hc_link_t *source, hc_link_t *target) 
 { // target is the one with new values (see += below...)
-  return ((source->distance * source->count) + (target->distance * target->count)) / (target->count += source->count);
+  target->count += source->count;
+  return (double)((source->distance * source->count) + (target->distance * target->count)) / (double)(target->count);
 }
 
 hc_link_t* 
@@ -220,7 +232,7 @@ hc_next (hierarchical_cluster hac, hc_cluster_t *cluster, hc_link_t *links, hc_l
       hc_cluster_t *source = lastLink->source;
       hc_cluster_t *target = lastLink->target;
       // lastLink->clusters[index++] = cluster->index;
-      // lastLink->clusters[index++] = cluster->length;
+      // lastLink->clusters[index++] = cluster->len_c;
       if (cluster->index_c > target->index_c) {
         mergedlink = hc_merge_link (&links[cluster->offset + source->index_c], &links[cluster->offset + target->index_c], hac);
         cluster->minimum = hc_link_min (mergedlink, cluster->minimum);
@@ -248,7 +260,7 @@ hc_unlink (hc_cluster_t *cluster)
 void 
 hc_merge_cluster (hc_cluster_t *source, hc_cluster_t *target) 
 {
-  target->length += source->length;
+  target->len_c += source->len_c;
   while (target->cluster != NULL) target = target->cluster;
   target->cluster = source;
   hc_unlink (source);
