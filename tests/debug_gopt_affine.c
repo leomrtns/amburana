@@ -1,6 +1,4 @@
 #include <amburana.h>
-#include <minimap.h>
-//#include "parasail/matrices/nuc44.h"
 
 typedef struct
 {
@@ -95,7 +93,7 @@ main (int argc, char **argv)
   kmerhash kmer;
   alignment aln;
   goptics_cluster gop;
-  hierarchical_cluster hc;
+  affineprop_cluster ap;
   clock_t time0, time1;
   double timing1 = 0., timing2 = 0.;
   char *iscore[]={"     ","core "};
@@ -106,6 +104,7 @@ main (int argc, char **argv)
   aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
   sd = new_sketch_distance_gen (aln, kmer, params.sketch->ival[0], params.nbits->ival[0]);
   dg = new_distance_generator_from_sketch_set (sd);
+  ap = new_affineprop_cluster (dg);
 
   for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance (dg, k);
@@ -122,16 +121,21 @@ main (int argc, char **argv)
     }
     del_goptics_cluster (gop); // recreated every time
 
-    hc = new_hierarchical_cluster (dg);
-    hierarchical_cluster_run (hc, 'u');  // 'u' -> upgma
+    affineprop_run (ap, 200, 0.6, 0.5); // n_iter, preference (in quantile), damping (weight of previous iteration)
     time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-    del_hierarchical_cluster (hc);
+
+    for (i=0; i < ap->n_clusters; i++) {
+      printf ("\t\t\t\t k=%2d Affine  cluster %2d: convergence: %3d exemplar :: %s\n", k, i, ap->n_converging, aln->taxlabel->string[ ap->exemplars[i] ]);
+      for (j=0; j < ap->d->n_samples; j++) if (ap->cluster[j] == i) 
+        printf ("%3d %-40s \n", j, aln->taxlabel->string[j]);
+    }
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
-  fprintf (stderr, "average time for gOPTICS: %lf and for hierarchical %lf \n", timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
-  fprintf (stderr, "timing for gOPTICS  %lf and hierarchical %lf as given internally\n",  gop->timing_secs/(double)(dg->n_distances), hc->timing_secs/(double)(dg->n_distances));
+  fprintf (stderr, "average time for gOPTICS: %lf and for affine prop %lf \n", timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
+  fprintf (stderr, "timing for gOPTICS  %lf and affine prop %lf as given internally\n",  gop->timing_secs/(double)(dg->n_distances), ap->timing_secs/(double)(dg->n_distances));
 
 
+  del_affineprop_cluster (ap);
   del_alignment (aln);
   del_sketch_distance_gen (sd);
   del_distance_generator (dg);

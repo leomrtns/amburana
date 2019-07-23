@@ -5,6 +5,7 @@
 #include "config.h"
 #include "sketch_distance.h"
 #include "clustering_affineprop.h"
+#include "clustering_hierarchical.h"
 
 //#include "edlib.h"
 //#include <parasail.h>
