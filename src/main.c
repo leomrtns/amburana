@@ -12,6 +12,7 @@ typedef struct
   struct arg_int  *kmerset;
   struct arg_int  *minsamp;
   struct arg_dbl  *epsilon;
+  struct arg_int  *link;
   struct arg_end  *end;
   void **argtable;
 } arg_parameters;
@@ -32,15 +33,17 @@ get_parameters_from_argv (int argc, char **argv)
     .kmerset = arg_int0("k", "kmer", "{0,1,2,3}", "code for set of kmers"),
     .minsamp = arg_int0("m", "min", "{2,3,...}", "min samples to be considered core (OPTICS)"),
     .epsilon = arg_dbl0("e", "epsilon", "<float>", "max dist to be considered neighbour (OPTICS)"),
+    .link    = arg_int0("l", "linkage", "{0...6}", "hierarchical clustering agglomerative function"),
     .end     = arg_end(10) // max number of errors it can store (o.w. shows "too many errors")
   };
-  void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.minsamp, params.epsilon, params.end};
+  void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.minsamp, params.epsilon, params.link, params.end};
   params.argtable = argtable; 
   params.sketch->ival[0] = 256; // default (must be before parsing)
   params.nbits->ival[0] = 10; // default (must be before parsing)
   params.kmerset->ival[0] = 3;
   params.minsamp->ival[0] = 2;
   params.epsilon->dval[0] = 1.;
+  params.link->ival[0] = 0;
   /* actual parsing: */
   if (arg_nullcheck(params.argtable)) biomcmc_error ("Problem allocating memory for the argtable (command line arguments) structure");
   arg_parse (argc, argv, params.argtable); // returns >0 if errors were found, but this info also on params.end->count
@@ -59,6 +62,7 @@ del_arg_parameters (arg_parameters params)
   if (params.kmerset) free (params.kmerset);
   if (params.minsamp) free (params.minsamp);
   if (params.epsilon) free (params.epsilon);
+  if (params.link) free (params.link);
   if (params.end) free (params.end);
 }
 
@@ -82,6 +86,8 @@ print_usage (arg_parameters params, char *progname)
   if (params.help->count) {
     printf ("The choices for the sets of kmers are:\n");
     for (i=0;i<4;i++) printf ("%d\t for %s analysis\n", i, biomcmc_kmer_class_string[i]);
+    printf ("The choices for the hierarchical clustering are:\n");
+    for (i=0;i<6;i++) printf ("%d\t for %s linkage\n", i, biomcmc_hierarchical_linkage_string[i]);
   }
   del_arg_parameters (params); exit (EXIT_SUCCESS);
 }
@@ -122,7 +128,7 @@ main (int argc, char **argv)
     }
     del_goptics_cluster (gop); // recreated every time
 
-    tree = hierarchical_cluster_topology (dg, 'u');  // 'u' -> upgma
+    tree = hierarchical_cluster_topology (dg, biomcmc_hierarchical_linkage_string[params.link->ival[0]]);
     tree->taxlabel = aln->taxlabel; aln->taxlabel->ref_counter++;
     time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
     s = topology_to_string_by_name (tree, tree->blength); printf ("tree %d :: %s\n", k, s);

@@ -13,6 +13,8 @@ typedef struct hc_link hc_link_t;
 typedef struct hc_cluster hc_cluster_t;
 typedef struct hc_level hc_level_t;
 
+const char *biomcmc_hierarchical_linkage_string[] = {"upgma", "wpgma", "single", "complete", "centroid", "median"};
+
 struct hierarchical_cluster_struct {
   distance_generator d;
   hc_cluster_t *clusters;
@@ -24,7 +26,7 @@ struct hierarchical_cluster_struct {
 struct hc_link {
   int index_l;
   int count;
-  double distance; // extra info from ward goes here
+  double distance, d_ij; // extra info from ward goes here
   hc_cluster_t *source;
   hc_cluster_t *target;
 };
@@ -50,11 +52,18 @@ struct hc_level {
 };
 
 void hc_cluster_init_zero (hc_cluster_t *clusters, int length);
-hierarchical_cluster new_hierarchical_cluster (distance_generator dg);
+hierarchical_cluster new_hierarchical_cluster (distance_generator dg, char linkage);
 void del_hierarchical_cluster (hierarchical_cluster ac);
 
 hc_link_t *hc_link_min (hc_link_t *a, hc_link_t* b);
+
 double hc_average_linkage (hc_link_t *source, hc_link_t *target);
+double hc_weighted_linkage (hc_link_t *source, hc_link_t *target);
+double hc_centroid_linkage (hc_link_t *source, hc_link_t *target); 
+double hc_median_linkage (hc_link_t *source, hc_link_t *target);
+double hc_minimum_linkage (hc_link_t *source, hc_link_t *target);
+double hc_maximum_linkage (hc_link_t *source, hc_link_t *target);
+
 hc_link_t* hc_merge_link (hc_link_t *source, hc_link_t *target, hierarchical_cluster hac);
 hc_link_t* hc_update (hc_cluster_t *cluster, hc_link_t *links);
 hc_link_t* hc_next (hierarchical_cluster hac, hc_cluster_t *cluster, hc_link_t *links, hc_link_t *lastLink);
@@ -85,7 +94,7 @@ hc_cluster_init_zero (hc_cluster_t *clusters, int length)
 }
  
 hierarchical_cluster
-new_hierarchical_cluster (distance_generator dg)
+new_hierarchical_cluster (distance_generator dg, char linkage)
 {
   int i, length, offset = 0, total = 0;
   hc_cluster_t *curr, *prev;
@@ -112,14 +121,16 @@ new_hierarchical_cluster (distance_generator dg)
       thislink->source = prev;
       thislink->target = curr;
       thislink->count = 1;
+      thislink->d_ij = 0.;
       thislink->distance = distance_generator_get (dg, prev->index_c, curr->index_c);
+      if ((linkage==4) || (linkage==5)) thislink->distance *= thislink->distance;
       curr->minimum = NULL;
       if (curr->minimum == NULL || thislink->distance < curr->minimum->distance) curr->minimum = thislink;
       prev = prev->prev;
       offset++;
     }
   }
-  hac->linkage = 'u';
+  hac->linkage = linkage;
   return hac;
 }
 
@@ -135,22 +146,18 @@ del_hierarchical_cluster (hierarchical_cluster hac)
 }
 
 topology
-hierarchical_cluster_topology (distance_generator dg, char linkage)
+hierarchical_cluster_topology (distance_generator dg, const char *linkage)
 {
-  hierarchical_cluster hac = new_hierarchical_cluster (dg);
+  hierarchical_cluster hac;
   hc_cluster_t *target = NULL, *source = NULL, *cluster = NULL;
   hc_link_t *thislink = NULL;
   hc_level_t *level, *prev = NULL;
-  int n = hac->d->n_samples, i, offset = 0;
+  int n = dg->n_samples, i, offset = 0;
+  char link_number = 0;
   topology tree = new_topology (dg->n_samples);
 
-  switch (linkage) {
-    case ('i'): case ('I'): hac->linkage = 'i'; break; // single linkage
-    case ('a'): case ('A'): hac->linkage = 'a'; break; // complete linkage
-    case ('w'): case ('W'): hac->linkage = 'w'; break; // weighted linkage (WPGMA)
-    case ('u'): case ('U'): hac->linkage = 'u'; break; // average linkage (UPGMA)
-    default:                hac->linkage = 'u'; break;
-  };
+  for (i = 0; i < 6; i++) if (!strncmp (linkage, biomcmc_hierarchical_linkage_string[i],3)) {link_number = i; break;}
+  hac = new_hierarchical_cluster (dg, link_number);
 
   cluster = hac->clusters;
   for (i = 0; i < n; i++) tree->blength[i] = 0.; // initially holds height (a.k.a. distance, linkage)
@@ -215,16 +222,37 @@ hc_link_t
 double
 hc_average_linkage (hc_link_t *source, hc_link_t *target) // UPGMA
 { // target is the one with new values (see += below...)
+  double n_j = (double) target->count;
   target->count += source->count;
-  return (double)((source->distance * source->count) + (target->distance * target->count)) / (double)(target->count);
+  return (double)((source->distance * source->count) + (target->distance * n_j)) / (double)(target->count);
 }
 
 double
 hc_weighted_linkage (hc_link_t *source, hc_link_t *target) 
 { // looks less weighted than above but it means that _nodes_ end up being weighted (UPGMA gives same weight to all nodes)
-  return (source->distance + target->distance) / 2.;
+  return (source->distance + target->distance) * 0.5;
 }
 
+double
+hc_median_linkage (hc_link_t *source, hc_link_t *target) 
+{
+  double d_ij = target->d_ij;
+  target->d_ij += target->distance + source->distance;
+  return (source->distance + target->distance) * 0.5 - d_ij * 0.25;
+}
+
+double
+hc_centroid_linkage (hc_link_t *source, hc_link_t *target) 
+{
+  double beta = target->count * source->count, n_j = target->count, alphas, d_ij = target->d_ij;
+  target->count += source->count; //target->source->count target->target->count;
+  beta /= (target->count * target->count);
+  alphas = (double)((source->distance * source->count) + (target->distance * n_j)) / (double)(target->count);
+  target->d_ij += target->distance + source->distance;
+  return alphas - beta * d_ij; 
+}
+
+// problem with ward is |k| (size of other)
 double
 hc_minimum_linkage (hc_link_t *source, hc_link_t *target) 
 {
@@ -243,10 +271,11 @@ hc_link_t*
 hc_merge_link (hc_link_t *source, hc_link_t *target, hierarchical_cluster hac) 
 { 
   switch (hac->linkage) {
-    case ('i'): target->distance = hc_minimum_linkage (source, target); break;
-    case ('a'): target->distance = hc_maximum_linkage (source, target); break;
-    case ('w'): target->distance = hc_weighted_linkage (source, target); break;
-    case ('u'):
+    case (1): target->distance = hc_weighted_linkage (source, target); break;
+    case (2): target->distance = hc_minimum_linkage (source, target); break;
+    case (3): target->distance = hc_maximum_linkage (source, target); break;
+    case (4): target->distance = hc_centroid_linkage (source, target); break;
+    case (5): target->distance = hc_median_linkage (source, target); break;
     default:    target->distance = hc_average_linkage (source, target); break;
   };
   return target; 

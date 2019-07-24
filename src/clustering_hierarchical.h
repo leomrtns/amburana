@@ -13,6 +13,8 @@
 #define _clustering_hierarchical_h_
 #include "sketch_distance.h" 
 
-topology hierarchical_cluster_topology (distance_generator dg, char linkage);
+extern const char *biomcmc_hierarchical_linkage_string[];
+
+topology hierarchical_cluster_topology (distance_generator dg, const char *linkage);
 
 #endif
