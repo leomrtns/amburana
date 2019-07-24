@@ -13,19 +13,6 @@
 #define _clustering_hierarchical_h_
 #include "sketch_distance.h" 
 
-
-typedef struct hierarchical_cluster_struct* hierarchical_cluster;
-
-struct hierarchical_cluster_struct
-{
-  distance_generator d;
-  void *clusters, *links, *levels;
-  double timing_secs;
-  char linkage;
-};
-
-hierarchical_cluster new_hierarchical_cluster (distance_generator dg);
-void del_hierarchical_cluster (hierarchical_cluster ac);
-void hierarchical_cluster_run (hierarchical_cluster ac, char linkage);
+topology hierarchical_cluster_topology (distance_generator dg, char linkage);
 
 #endif

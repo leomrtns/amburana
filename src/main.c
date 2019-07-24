@@ -95,10 +95,10 @@ main (int argc, char **argv)
   kmerhash kmer;
   alignment aln;
   goptics_cluster gop;
-  hierarchical_cluster hc;
+  topology tree;
   clock_t time0, time1;
   double timing1 = 0., timing2 = 0.;
-  char *iscore[]={"     ","core "};
+  char *s, *iscore[]={"     ","core "};
 
   arg_parameters params = get_parameters_from_argv (argc, argv);
   kmer = new_kmerhash (params.kmerset->ival[0]); 
@@ -122,14 +122,15 @@ main (int argc, char **argv)
     }
     del_goptics_cluster (gop); // recreated every time
 
-    hc = new_hierarchical_cluster (dg);
-    hierarchical_cluster_run (hc, 'u');  // 'u' -> upgma
+    tree = hierarchical_cluster_topology (dg, 'u');  // 'u' -> upgma
+    tree->taxlabel = aln->taxlabel; aln->taxlabel->ref_counter++;
     time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-    del_hierarchical_cluster (hc);
+    s = topology_to_string_by_name (tree, tree->blength); printf ("tree %d :: %s\n", k, s);
+    del_topology (tree); if (s) free (s);
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
   fprintf (stderr, "average time for gOPTICS: %lf and for hierarchical %lf \n", timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
-  fprintf (stderr, "timing for gOPTICS  %lf and hierarchical %lf as given internally\n",  gop->timing_secs/(double)(dg->n_distances), hc->timing_secs/(double)(dg->n_distances));
+  fprintf (stderr, "timing for gOPTICS  %lf as given internally\n",  gop->timing_secs/(double)(dg->n_distances));
 
 
   del_alignment (aln);
