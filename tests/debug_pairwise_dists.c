@@ -1,6 +1,4 @@
 #include <amburana.h>
-//#include <minimap.h>
-//#include "parasail/matrices/nuc44.h"
 
 /* not an actual check, but  originally a pilot version of amburana which returns several kmer-based distances */
 typedef struct

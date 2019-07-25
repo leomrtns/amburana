@@ -1,9 +1,6 @@
-#AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../@BIOMCMCLIB@/lib -I$(srcdir)/../submodules/parasail/ @OPENMP_CPPFLAGS@
-#LDADD = $(GTKDEPS_LIBS) ../submodules/parasail/libparasail.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
-AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../minimap2/  -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
-LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  ../minimap2/libminimap2.la $(AM_LDFLAGS)
+AM_CPPFLAGS = $(GTKDEPS_CFLAGS)  -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
+LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
 AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@
-## TODO: libparasail should not be hardcoded here, should be set by configure
 
 common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h clustering_affineprop.h \
                  clustering_hierarchical.h

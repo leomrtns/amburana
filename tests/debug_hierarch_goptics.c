@@ -1,5 +1,6 @@
 #include <amburana.h>
 
+/* not an actual check (returns PASS always), but contains comparison between GOPTICS and hierarchical models */
 typedef struct
 {
   struct arg_lit  *help;

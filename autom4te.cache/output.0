@@ -801,7 +801,7 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 CHECK_CFLAGS
 CHECK_LIBS'
-ac_subdirs_all='minimap2 submodules/parasail biomcmc-lib'
+ac_subdirs_all='biomcmc-lib'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -13355,62 +13355,14 @@ else
   as_fn_error $? "\"biomcmc-lib submodule missing, please git clone --recursive or link by hand to location of source code\"" "$LINENO" 5
 fi
 
-## if line below works it means parasail is already installed, no need to compile it again from subdir
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for parasail_traceback_generic in -lparasail" >&5
-$as_echo_n "checking for parasail_traceback_generic in -lparasail... " >&6; }
-if ${ac_cv_lib_parasail_parasail_traceback_generic+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lparasail  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char parasail_traceback_generic ();
-int
-main ()
-{
-return parasail_traceback_generic ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_parasail_parasail_traceback_generic=yes
-else
-  ac_cv_lib_parasail_parasail_traceback_generic=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_parasail_parasail_traceback_generic" >&5
-$as_echo "$ac_cv_lib_parasail_parasail_traceback_generic" >&6; }
-if test "x$ac_cv_lib_parasail_parasail_traceback_generic" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-@%:@define HAVE_LIBPARASAIL 1
-_ACEOF
-
-  LIBS="-lparasail $LIBS"
-
-fi
-
-## autoreconf not needed on parasail if we run it here at amburana
-### TODO: replace hardcoded libparasail location in Makefile.am by config variable set here
 # Call biomcmc-lib ./configure script recursively.
 
 
-subdirs="$subdirs minimap2 submodules/parasail biomcmc-lib"
+subdirs="$subdirs biomcmc-lib"
 
 BIOMCMCLIB=biomcmc-lib
 
-ac_config_files="$ac_config_files Makefile minimap2/Makefile src/Makefile tests/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile tests/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -14433,7 +14385,6 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "minimap2/Makefile") CONFIG_FILES="$CONFIG_FILES minimap2/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
 

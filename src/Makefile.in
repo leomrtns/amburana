@@ -120,7 +120,7 @@ am_amburana_OBJECTS = amburana-main.$(OBJEXT)
 amburana_OBJECTS = $(am_amburana_OBJECTS)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = ../biomcmc-lib/lib/libbiomcmc.la \
-	../minimap2/libminimap2.la $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1)
 amburana_DEPENDENCIES = libamburana.la $(am__DEPENDENCIES_2)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -316,11 +316,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-
-#AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../@BIOMCMCLIB@/lib -I$(srcdir)/../submodules/parasail/ @OPENMP_CPPFLAGS@
-#LDADD = $(GTKDEPS_LIBS) ../submodules/parasail/libparasail.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
-AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../minimap2/  -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
-LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  ../minimap2/libminimap2.la $(AM_LDFLAGS)
+AM_CPPFLAGS = $(GTKDEPS_CFLAGS)  -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
+LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
 common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h clustering_affineprop.h \
                  clustering_hierarchical.h
 
