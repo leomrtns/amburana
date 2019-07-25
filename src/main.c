@@ -28,7 +28,7 @@ get_parameters_from_argv (int argc, char **argv)
     .fasta   = arg_filen(NULL, NULL, NULL, 1, 1, "fasta file"),
     .sketch  = arg_int0("s", "size", "<n>", "sketch size for minhash"),
     .nbits   = arg_int0("b", "bits", "<n>", "number of bits for suffix of one-permutation minhash"),
-    .kmerset = arg_int0("k", "kmer", "{0,1,2,3}", "code for set of kmers"),
+    .kmerset = arg_int0("k", "kmer", "{0...4}", "code for set of kmers"),
     .minsamp = arg_int0("m", "min", "{2,3,...}", "min samples to be considered core (OPTICS)"),
     .epsilon = arg_dbl0("e", "epsilon", "<float>", "max dist to be considered neighbour (OPTICS)"),
     .link    = arg_int0("l", "linkage", "{0...6}", "hierarchical clustering agglomerative function"),
@@ -83,7 +83,7 @@ print_usage (arg_parameters params, char *progname)
   arg_print_glossary(stdout, params.argtable,"  %-32s %s\n");
   if (params.help->count) {
     printf ("The choices for the sets of kmers are:\n");
-    for (i=0;i<4;i++) printf ("%d\t for %s analysis\n", i, biomcmc_kmer_class_string[i]);
+    for (i=0;i<5;i++) printf ("%d\t for %s analysis\n", i, biomcmc_kmer_class_string[i]);
     printf ("The choices for the hierarchical clustering are:\n");
     for (i=0;i<6;i++) printf ("%d\t for %s linkage\n", i, biomcmc_hierarchical_linkage_string[i]);
   }
@@ -93,16 +93,15 @@ print_usage (arg_parameters params, char *progname)
 int
 main (int argc, char **argv)
 {
-  int i, j, k;
+  int k;
   sketch_distance_gen sd;
   distance_generator dg;
   kmerhash kmer;
   alignment aln;
-  goptics_cluster gop;
   topology tree;
   clock_t time0, time1;
-  double timing1 = 0., timing2 = 0.;
-  char *s, *iscore[]={"     ","core "};
+  double timing2 = 0.;
+  char *s;
 
   arg_parameters params = get_parameters_from_argv (argc, argv);
   kmer = new_kmerhash (params.kmerset->ival[0]); 
@@ -114,18 +113,6 @@ main (int argc, char **argv)
   for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance (dg, k);
     time0 = clock ();
-
-    gop = new_goptics_cluster_run (dg, params.minsamp->ival[0], params.epsilon->dval[0]);
-    assign_goptics_clusters (gop, 0.1 * params.epsilon->dval[0]);
-    time1 = clock (); timing1 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-
-    for (i=-1; i < gop->n_clusters; i++) {
-      printf ("\t\t\t\t k=%d  GOP  cluster %d:\n", k, i);
-      for (j=0; j < gop->d->n_samples; j++) if (gop->cluster[j] == i) 
-        printf (" %s %-40s \t %7.5lf    %7.5lf\n",iscore[(int)gop->core[j]], aln->taxlabel->string[j], gop->reach_distance[j], gop->core_distance[j]);
-    }
-    del_goptics_cluster (gop); // recreated every time
-
     tree = hierarchical_cluster_topology (dg, biomcmc_hierarchical_linkage_string[params.link->ival[0]]);
     tree->taxlabel = aln->taxlabel; aln->taxlabel->ref_counter++;
     time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
@@ -133,8 +120,7 @@ main (int argc, char **argv)
     del_topology (tree); if (s) free (s);
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
-  fprintf (stderr, "average time for gOPTICS: %lf and for hierarchical %lf \n", timing1/(double)(dg->n_distances), timing2/(double)(dg->n_distances));
-  fprintf (stderr, "timing for gOPTICS  %lf as given internally\n",  gop->timing_secs/(double)(dg->n_distances));
+  fprintf (stderr, "average time for hierarchical %lf \n", timing2/(double)(dg->n_distances));
 
 
   del_alignment (aln);
