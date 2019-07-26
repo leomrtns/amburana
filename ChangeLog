@@ -1,5 +1,7 @@
+2019.07.26
+	* TODO: implement bioNJ with distance_generator(); compare my two UPGMA implementations; refactor fasta reading.
 2019.07.25
-		* removed parasail (submodule) and minimap (bare copy of directory):
+	* removed parasail (submodule) and minimap (bare copy of directory):
 2019.06  
-		* previous version of software on tests: compile them with "make check" 
+	* previous version of software on tests: compile them with "make check" 
 		

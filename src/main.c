@@ -100,27 +100,35 @@ main (int argc, char **argv)
   alignment aln;
   topology tree;
   clock_t time0, time1;
-  double timing2 = 0.;
   char *s;
+  FILE *stream;
 
+  time0 = clock ();
   arg_parameters params = get_parameters_from_argv (argc, argv);
   kmer = new_kmerhash (params.kmerset->ival[0]); 
 
-  aln = read_alignment_from_file ((char*) params.fasta->filename[0]);
+  aln = read_fasta_alignment_from_file ((char*) params.fasta->filename[0]);
+  time1 = clock (); fprintf (stderr, "read alignment timing: %lf\n",  (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); fflush(stderr);
+  time0 = time1;
+  stream = biomcmc_fopen ("_fastafile", "w");
+  print_alignment_in_fasta_format (aln, stream);
+  fclose (stream);
+
   sd = new_sketch_distance_gen (aln, kmer, params.sketch->ival[0], params.nbits->ival[0]);
   dg = new_distance_generator_from_sketch_set (sd);
+  time1 = clock (); fprintf (stderr, "sketch/distance initialisation: %lf\n",  (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); fflush(stderr); 
+  time0 = time1;
 
   for (k=0; k < dg->n_distances; k++) {
     distance_generator_set_which_distance (dg, k);
-    time0 = clock ();
     tree = hierarchical_cluster_topology (dg, biomcmc_hierarchical_linkage_string[params.link->ival[0]]);
     tree->taxlabel = aln->taxlabel; aln->taxlabel->ref_counter++;
-    time1 = clock (); timing2 += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); time0 = time1;
-    s = topology_to_string_by_name (tree, tree->blength); printf ("tree %d :: %s\n", k, s);
+    s = topology_to_string_by_name (tree, tree->blength); printf ("[%3d] %s\n", k, s);
     del_topology (tree); if (s) free (s);
+    time1 = clock (); fprintf (stderr, "hierarchical clustering: %lf\n",  (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); fflush(stderr); 
+    time0 = time1;
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
-  fprintf (stderr, "average time for hierarchical %lf \n", timing2/(double)(dg->n_distances));
 
 
   del_alignment (aln);
