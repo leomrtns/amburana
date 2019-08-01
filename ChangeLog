@@ -1,3 +1,7 @@
+2019.08.01
+	* BUG: MinHash is based on maxheap, which is bugged: if an element X is smaller than Max and heap is full, we cannot
+	automatically replace Max, b/c X may be _equal_ to existing minhash element. (I.e. true minhash is set of distinct
+	elements)
 2019.07.26
 	* TODO: implement bioNJ with distance_generator(); compare my two UPGMA implementations; refactor fasta reading.
 2019.07.25

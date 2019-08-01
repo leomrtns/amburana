@@ -42,6 +42,7 @@ heap64_remove_maximum (heap64 h64) // a.k.a. pop()
   return max;
 }
 
+// FIXME: cannot replace, must first check if already existing in heap 
 void 
 heap64_insert (heap64 h64, uint64_t h) 
 {
