@@ -97,41 +97,29 @@ main (int argc, char **argv)
   sketch_distance_gen sd;
   distance_generator dg;
   kmerhash kmer;
-  alignment aln;
   topology tree;
   clock_t time0, time1;
   char *s;
-  FILE *stream;
 
   time0 = clock ();
   arg_parameters params = get_parameters_from_argv (argc, argv);
   kmer = new_kmerhash (params.kmerset->ival[0]); 
 
-  aln = read_fasta_alignment_from_file ((char*) params.fasta->filename[0]);
-  time1 = clock (); fprintf (stderr, "read alignment timing: %lf\n",  (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); fflush(stderr);
-  time0 = time1;
-  stream = biomcmc_fopen ("_fastafile", "w");
-  print_alignment_in_fasta_format (aln, stream);
-  fclose (stream);
-
-  sd = new_sketch_distance_gen (aln, kmer, params.sketch->ival[0], params.nbits->ival[0]);
+  sd = new_sketch_distance_gen_from_file ((char*) params.fasta->filename[0], kmer, params.sketch->ival[0], params.nbits->ival[0]);
   dg = new_distance_generator_from_sketch_set (sd);
   time1 = clock (); fprintf (stderr, "sketch/distance initialisation: %lf\n",  (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); fflush(stderr); 
-  time0 = time1;
 
   for (k=0; k < dg->n_distances; k++) {
+    time0 = time1;
     distance_generator_set_which_distance (dg, k);
     tree = hierarchical_cluster_topology (dg, biomcmc_hierarchical_linkage_string[params.link->ival[0]]);
-    tree->taxlabel = aln->taxlabel; aln->taxlabel->ref_counter++;
+    tree->taxlabel = sd->seqname; sd->seqname->ref_counter++;
     s = topology_to_string_by_name (tree, tree->blength); printf ("[%3d] %s\n", k, s);
     del_topology (tree); if (s) free (s);
     time1 = clock (); fprintf (stderr, "hierarchical clustering: %lf\n",  (double)(time1-time0)/(double)(CLOCKS_PER_SEC)); fflush(stderr); 
-    time0 = time1;
   }
   fprintf (stderr, "calculated sketches in %lf secs and pairwise distances in %lf secs\n", sd->secs_sketches, sd->secs_distances);
 
-
-  del_alignment (aln);
   del_sketch_distance_gen (sd);
   del_distance_generator (dg);
   del_kmerhash (kmer);

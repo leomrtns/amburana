@@ -1,6 +1,6 @@
 AM_CPPFLAGS = $(GTKDEPS_CFLAGS)  -I$(srcdir)/../@BIOMCMCLIB@/lib  @OPENMP_CPPFLAGS@
-LDADD = $(GTKDEPS_LIBS)  ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
-AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@
+LDADD = $(GTKDEPS_LIBS)  @ZLIB_LIBS@ ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
+AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@  @ZLIB_CFLAGS@
 
 common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h clustering_affineprop.h \
                  clustering_hierarchical.h

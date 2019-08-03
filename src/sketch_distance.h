@@ -22,9 +22,12 @@ struct sketch_distance_gen_struct
   sketch_set *sset, sset_zero;  /*!< \brief sset[] are actual kmer sets, sset_zero will have sketch sizes */
   double secs_sketches, secs_distances;
   distance_generator generator;
+  char_vector seqname;
+  int n_samples;
   int ref_counter;
 };
 
+sketch_distance_gen new_sketch_distance_gen_from_file (char *filename, kmerhash kmer, int heap_mh_size, int bbit_mh_bits);
 sketch_distance_gen new_sketch_distance_gen (alignment aln, kmerhash kmer, int heap_mh_size, int bbit_mh_bits);
 void del_sketch_distance_gen (sketch_distance_gen sd);
 distance_generator new_distance_generator_from_sketch_set (sketch_distance_gen sd);
