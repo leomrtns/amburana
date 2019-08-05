@@ -16,18 +16,16 @@
 
 typedef struct heap64_struct* heap64; // old, simple struct
 typedef struct heap_hash64_struct* heap_hash64;
-typedef struct hpq_item_struct* hpq_item;
 
 struct heap64_struct {
   uint64_t *hash;
   int heap_size, n; // size allocated to heap vector, and n=currently existing elements 
 };
 
-struct hpq_item_struct {
+typedef struct {
   int id, freq;
   uint64_t hash; 
-  void *v; // extra information, currently NULL 
-};
+} hpq_item ;
 
 struct heap_hash64_struct {
   hpq_item *item; 
@@ -47,7 +45,7 @@ heap_hash64 new_heap_hash64 (int heap_size);
 void del_heap_hash64 (heap_hash64 pq);
 hpq_item heap_hash64_get_maximum (heap_hash64 pq);
 hpq_item heap_hash64_remove_maximum (heap_hash64 pq);
-void heap_hash64_insert (heap_hash64 pq, struct hpq_item_struct item); /*!< \brief notice that item is a struct, not a pointer */
+void heap_hash64_insert (heap_hash64 pq, hpq_item item); /*!< \brief notice that item is a struct, not a pointer */
 void heap_hash64_finalise_heap_qsort (heap_hash64 pq);
 
 #endif

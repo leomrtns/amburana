@@ -126,7 +126,7 @@ del_heap_minhash_sketch (heap_minhash_sketch minh)
 void // void is to allow for overloading (function pointers)
 heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash, size_t location)
 {
-  struct hpq_item_struct item = {.v=NULL, .id = (int) location, .freq = 1, .hash = hash};
+  hpq_item item = {.id = (int) location, .freq = 1, .hash = hash};
   heap_hash64_insert (minh->sketch, item);
 }
 
@@ -149,9 +149,9 @@ heap_minhash_sketch_distance (heap_minhash_sketch mh1, heap_minhash_sketch mh2, 
   h1 = mh1->sketch->item; n1 = mh1->sketch->n;
   h2 = mh2->sketch->item; n2 = mh2->sketch->n;
   for (j1 = j2 = 0; (j1 < n1) && (j2 < n2) && compared < mh1->sketch->heap_size; compared++) { // both are in decreasing order
-    if      (h1[j1]->hash > h2[j2]->hash) j1++; 
-    else if (h1[j1]->hash < h2[j2]->hash) j2++; 
-    else { cosine += (h1[j1]->freq * h2[j2]->freq); common++; j1++; j2++; } // same hash in both
+    if      (h1[j1].hash > h2[j2].hash) j1++; 
+    else if (h1[j1].hash < h2[j2].hash) j2++; 
+    else { cosine += (h1[j1].freq * h2[j2].freq); common++; j1++; j2++; } // same hash in both
   }
   if (compared < mh1->sketch->heap_size) compared += (n1 - j1 + n2 - j2); // try to complete the union operation (following Mash)
   if (compared > mh1->sketch->heap_size) compared = mh1->sketch_size;

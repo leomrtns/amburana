@@ -6,7 +6,7 @@
 
 static void heap64_bubble_down (heap64 h64, int p);
 static void heap64_bubble_up (heap64 h64, int index);
-static bool heap_hash64_item_already_here (heap_hash64 pq, struct hpq_item_struct item, int p);
+static bool heap_hash64_item_already_here (heap_hash64 pq, hpq_item item, int p);
 static void heap_hash64_bubble_down (heap_hash64 pq, int p);
 static void heap_hash64_bubble_up (heap_hash64 pq, int index);
 static int compare_hpq_item_increasing (const void *a, const void *b);
@@ -117,11 +117,7 @@ new_heap_hash64 (int heap_size)
   pq->n = 0;
   pq->heap_size = (heap_size < 2 ? 2: heap_size);
   pq->item = (hpq_item*) biomcmc_malloc ((pq->heap_size + 1) * sizeof (hpq_item));
-  for (i = 0; i < pq->heap_size + 1; i++) {
-    pq->item[i] = (hpq_item) biomcmc_malloc (sizeof (struct hpq_item_struct));
-    pq->item[i]->freq = pq->item[i]->id = 0; 
-    pq->item[i]->hash = 0ULL; pq->item[i]->v = NULL; 
-  }
+  for (i = 0; i < pq->heap_size + 1; i++) { pq->item[i].freq = pq->item[i].id = 0; pq->item[i].hash = 0ULL; }
   return pq;
 }
 
@@ -129,10 +125,7 @@ void
 del_heap_hash64 (heap_hash64 pq)
 {
   if (!pq) return;
-  if (pq->item) {
-    for (int i = pq->heap_size; i >=0; i--) if (pq->item[i]) free (pq->item[i]);
-    free (pq->item); 
-  }
+  if (pq->item) free (pq->item); 
   free (pq); 
 }
 
@@ -143,7 +136,7 @@ hpq_item
 heap_hash64_remove_maximum (heap_hash64 pq) // a.k.a. pop() 
 {
   hpq_item max = pq->item[1]; //the root is the maximum element
-  if (pq->n == 0) return NULL;
+  if (pq->n == 0) return (hpq_item) {0,0,0};
   pq->item[1] = pq->item[pq->n]; // replace the element at the top with last element in the heap
   pq->n--; 
   heap_hash64_bubble_down (pq, 1);
@@ -151,34 +144,32 @@ heap_hash64_remove_maximum (heap_hash64 pq) // a.k.a. pop()
 }
 
 void 
-heap_hash64_insert (heap_hash64 pq, struct hpq_item_struct item) // struct, not a pointer
+heap_hash64_insert (heap_hash64 pq, hpq_item item) // struct, not a pointer
 {
   if (heap_hash64_item_already_here (pq, item, 1)) return; // if exists, then increase count  
   if (pq->n == pq->heap_size) { // replace if smaller than maximum
-    if (item.hash < pq->item[1]->hash) { 
-      pq->item[1]->v    = item.v;
-      pq->item[1]->id   = item.id; 
-      pq->item[1]->freq = item.freq;
-      pq->item[1]->hash = item.hash;
+    if (item.hash < pq->item[1].hash) { 
+      pq->item[1].id   = item.id; 
+      pq->item[1].freq = item.freq;
+      pq->item[1].hash = item.hash;
       heap_hash64_bubble_down (pq, 1); 
     }
   }
   else { // regular insert (a.k.a. push)
     pq->n++;
-    pq->item[pq->n]->v    = item.v;
-    pq->item[pq->n]->id   = item.id;
-    pq->item[pq->n]->freq = item.freq; // should be one
-    pq->item[pq->n]->hash = item.hash;
+    pq->item[pq->n].id   = item.id;
+    pq->item[pq->n].freq = item.freq; // should be one
+    pq->item[pq->n].hash = item.hash;
     heap_hash64_bubble_up (pq, pq->n);
   }
 }
 
 static bool
-heap_hash64_item_already_here (heap_hash64 pq, struct hpq_item_struct item, int p)
+heap_hash64_item_already_here (heap_hash64 pq, hpq_item item, int p)
 { // must traverse both children since MaxHeap is not ordered like BST
   if (p > pq->n) return false; // it can be equal, since we have one extra element (item[1...n] )
-  if (item.hash == pq->item[p]->hash) { pq->item[p]->freq++; return true; }
-  if (item.hash  > pq->item[p]->hash) return false;
+  if (item.hash == pq->item[p].hash) { pq->item[p].freq++; return true; }
+  if (item.hash  > pq->item[p].hash) return false;
   bool below = heap_hash64_item_already_here (pq, item, 2 * p); // 'left' child 
   if (!below) below = heap_hash64_item_already_here (pq, item, 2 * p + 1); // traverse right child if not found yet
   return below;
@@ -190,7 +181,7 @@ heap_hash64_bubble_down (heap_hash64 pq, int p)
 	int i, c = 2*p, max_index = p; //c= index of younger child, max_index = index of maximum child
   for (i = 0; i < 2; i++) if(c + i <= pq->n) {
     //check to see if the data at min_index is smaller than the data at the child
-    if (pq->item[max_index]->hash < pq->item[c+i]->hash)	max_index = c + i;
+    if (pq->item[max_index].hash < pq->item[c+i].hash)	max_index = c + i;
   }
 	if (max_index != p) {
     hpq_item tmp = pq->item[p];
@@ -206,7 +197,7 @@ heap_hash64_bubble_up (heap_hash64 pq, int index)
   int parent = (index == 1 ? -1 : (int)(index/2));
   if (parent == -1) return;	//if we are at the root of the heap, no parent
   //if the parent node has a smaller data value, we need to bubble up
-  if (pq->item[parent]->hash < pq->item[index]->hash) {
+  if (pq->item[parent].hash < pq->item[index].hash) {
     hpq_item tmp = pq->item[parent];
     pq->item[parent] = pq->item[index];
     pq->item[index] = tmp;
@@ -226,16 +217,16 @@ heap_hash64_finalise_heap_qsort (heap_hash64 pq)
 //    pq->heap_size = pq->n;
 //  }
   int sqrt_sum = 0;
-  for (int i = 1; i < pq->n; i++) printf ("%d ", (pq->item[i-1]->hash > pq->item[i]->hash) ? 1:0); 
+  for (int i = 1; i < pq->n; i++) printf ("%d ", (pq->item[i-1].hash > pq->item[i].hash) ? 1:0); 
   printf ("    DEBUG\n");
-  for (int i = 0; i < pq->n; i++) sqrt_sum += (pq->item[i]->freq * pq->item[i]->freq);
+  for (int i = 0; i < pq->n; i++) sqrt_sum += (pq->item[i].freq * pq->item[i].freq);
   pq->sqrt_sum = sqrt ((double)(sqrt_sum));
 }
 
 static int
 compare_hpq_item_increasing (const void *a, const void *b)
 {
-  if ( ((hpq_item)b)->hash < ((hpq_item)a)->hash ) return 1;
-  if ( ((hpq_item)b)->hash > ((hpq_item)a)->hash ) return -1;
+  if ( ((hpq_item *)b)->hash < ((hpq_item *)a)->hash ) return 1;
+  if ( ((hpq_item *)b)->hash > ((hpq_item *)a)->hash ) return -1;
   return 0;
 }
