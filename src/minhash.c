@@ -126,8 +126,8 @@ del_heap_minhash_sketch (heap_minhash_sketch minh)
 void // void is to allow for overloading (function pointers)
 heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash, size_t location)
 {
+  if (!hash) return; // first large kmers are missing, only short ones exist (we can afford to miss true zeroed hashes)
   hpq_item item = {.id = (int) location, .freq = 1, .hash = hash};
-  if (!hash) printf ("DEBUG %lu ", location);
   heap_hash64_insert (minh->sketch, item);
 }
 
@@ -195,6 +195,7 @@ del_bbit_minhash_sketch (bbit_minhash_sketch oph)
 void
 bbit_minhash_sketch_insert (bbit_minhash_sketch oph, uint64_t hash)
 {
+  if (!hash) return; // first large kmers are missing, only short ones exist (we can afford to miss true zeroed hashes)
   uint64_t prefix = hash >> oph->n_bits;      // hash with (64 - n_bits) bits
   uint32_t suffix = hash &  oph->suffix_mask; // int value of least sig n_bits of hash
     if (oph->sketch[suffix] > prefix) oph->sketch[suffix] = prefix;
