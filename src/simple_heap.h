@@ -14,8 +14,8 @@
 #define _simple_heap_h_ 
 #include <biomcmc.h>
 
-typedef struct heap64_struct* heap64;
-typedef struct heap_pqueue_struct* heap_pqueue;
+typedef struct heap64_struct* heap64; // old, simple struct
+typedef struct heap_hash64_struct* heap_hash64;
 typedef struct hpq_item_struct* hpq_item;
 
 struct heap64_struct {
@@ -24,14 +24,15 @@ struct heap64_struct {
 };
 
 struct hpq_item_struct {
-  int id; 
-  double priority; 
+  int id, freq;
+  uint64_t hash; 
   void *v; // extra information, currently NULL 
 };
 
-struct heap_pqueue_struct {
+struct heap_hash64_struct {
   hpq_item *item; 
   int heap_size, n;
+  double sqrt_sum;  // used in cosine distance calculation
 };
 
 heap64 new_heap64 (int heap_size);
@@ -42,11 +43,11 @@ void heap64_insert (heap64 h64, uint64_t h);
 void heap64_finalise_heap_pop (heap64 h64); // DO NOT USE: qsort is much faster
 void heap64_finalise_heap_qsort (heap64 h64);
 
-heap_pqueue new_heap_pqueue (int heap_size);
-void del_heap_pqueue (heap_pqueue pq);
-hpq_item heap_pqueue_get_maximum (heap_pqueue pq);
-hpq_item heap_pqueue_remove_maximum (heap_pqueue pq);
-void heap_pqueue_insert (heap_pqueue pq, struct hpq_item_struct item); /*!< \brief notice that item is a struct, not a pointer */
-void heap_pqueue_finalise_heap_qsort (heap_pqueue pq);
+heap_hash64 new_heap_hash64 (int heap_size);
+void del_heap_hash64 (heap_hash64 pq);
+hpq_item heap_hash64_get_maximum (heap_hash64 pq);
+hpq_item heap_hash64_remove_maximum (heap_hash64 pq);
+void heap_hash64_insert (heap_hash64 pq, struct hpq_item_struct item); /*!< \brief notice that item is a struct, not a pointer */
+void heap_hash64_finalise_heap_qsort (heap_hash64 pq);
 
 #endif

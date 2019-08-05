@@ -32,7 +32,7 @@ struct sketch_set_struct
 struct heap_minhash_sketch_struct
 {
   int sketch_size;
-  heap64 sketch;
+  heap_hash64 sketch;
   kmerhash kmer; // we need some constants defined here (kmer sizes)
 };
 

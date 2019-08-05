@@ -12,9 +12,9 @@
 
 heap_minhash_sketch new_heap_minhash_sketch (kmerhash kmer, int sketch_size);
 void del_heap_minhash_sketch (heap_minhash_sketch minh);
-void heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash);
+void heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash, size_t location);
 void heap_minhash_sketch_finalise (heap_minhash_sketch minh);
-double heap_minhash_sketch_distance (heap_minhash_sketch mh1, heap_minhash_sketch mh2, int idx_in_kmer_params);
+void heap_minhash_sketch_distance (heap_minhash_sketch mh1, heap_minhash_sketch mh2, int idx_in_kmer_params, double *w_dist, double *u_dist);
 
 bbit_minhash_sketch new_bbit_minhash_sketch (kmerhash kmer, int n_bits);
 void del_bbit_minhash_sketch (bbit_minhash_sketch oph);
@@ -26,14 +26,14 @@ new_sketch_set_bare_numbers_only (kmerhash kmer, int heap_mh_size, int bbit_mh_b
 {
   sketch_set sset = (sketch_set) biomcmc_malloc (sizeof (struct sketch_set_struct));
   sset->kmer = kmer; sset->kmer->ref_counter++;
-  sset->n_heap_mh = kmer->n_hash/3; // this division is hardcoded, I could change it in the future
+  sset->n_heap_mh = kmer->n_hash/2; // this division is hardcoded, I could change it in the future
   sset->n_bbit_mh = kmer->n_hash - sset->n_heap_mh;
   sset->heap_mh_size = heap_mh_size;
   sset->bbit_mh_bits = bbit_mh_bits;
   sset->heap_mh = NULL;
   sset->bbit_mh = NULL; 
-  sset->n_distances = kmer->n_hash;
-  sset->dist = NULL;
+  sset->n_distances = sset->n_heap_mh + sset->n_bbit_mh; // vector size, but we can store 2x if we remember that we have i and j from d(i,j)
+  sset->dist = NULL; // (cont. above) and thus i has n_distances and j as well. Very ugly hack, but as long as sketch_distance_gen understands...
   return sset;
 }
 
@@ -78,7 +78,7 @@ new_sketch_set_from_dna (char *dna, size_t dna_length, kmerhash kmer, int heap_m
   link_kmerhash_to_dna_sequence (sset->kmer, dna, dna_length); 
 
   while ( kmerhash_iterator (kmer)) { // all magic happens here
-    for (i = 0; i < sset->n_heap_mh; i++) heap_minhash_sketch_insert (sset->heap_mh[i], kmer->hash[ sset->i_heap[i] ]);
+    for (i = 0; i < sset->n_heap_mh; i++) heap_minhash_sketch_insert (sset->heap_mh[i], kmer->hash[ sset->i_heap[i] ], kmer->i);
     for (i = 0; i < sset->n_bbit_mh; i++) bbit_minhash_sketch_insert (sset->bbit_mh[i], kmer->hash[ sset->i_bbit[i] ]);
   }
 
@@ -94,8 +94,8 @@ sketch_set_compare (sketch_set ss1, sketch_set ss2)
   if (ss1->n_heap_mh != ss2->n_heap_mh) biomcmc_error ("Sketch sets with distinct number of heap_minhash_sketch sizes");
   if (ss1->n_bbit_mh != ss2->n_bbit_mh) biomcmc_error ("Sketch sets with distinct number of bbit_minhash_sketch sizes");
   
-  for (i = 0; i < ss1->n_heap_mh; i++) 
-    ss1->dist[i] = ss2->dist[i] = heap_minhash_sketch_distance (ss1->heap_mh[i],ss2->heap_mh[i], ss1->i_heap[i]);
+  for (i = 0; i < ss1->n_heap_mh; i++) // store 2 dists, weighted and unweighted, into two vectors
+    heap_minhash_sketch_distance (ss1->heap_mh[i],ss2->heap_mh[i], ss1->i_heap[i], &(ss1->dist[i]), &(ss2->dist[i]));
   for (i = 0; i < ss1->n_bbit_mh; i++) 
     ss1->dist[i + ss1->n_heap_mh] = ss2->dist[i + ss2->n_heap_mh] = bbit_minhash_sketch_distance (ss1->bbit_mh[i],ss2->bbit_mh[i], ss1->i_bbit[i]);
   return;
@@ -106,9 +106,9 @@ new_heap_minhash_sketch (kmerhash kmer, int sketch_size)
 {
   heap_minhash_sketch minh = (heap_minhash_sketch) biomcmc_malloc (sizeof (struct heap_minhash_sketch_struct));
   if (sketch_size < 8)    sketch_size = 8; // ideal 16~128 
-  if (sketch_size > 4096) sketch_size = 4096; 
+  if (sketch_size > 8192) sketch_size = 8192; 
   minh->sketch_size = sketch_size;
-  minh->sketch = new_heap64 (sketch_size); // longer kmers have longer sketches 
+  minh->sketch = new_heap_hash64 (sketch_size);
   minh->kmer = kmer;
   minh->kmer->ref_counter++;
   return minh;
@@ -118,46 +118,49 @@ void
 del_heap_minhash_sketch (heap_minhash_sketch minh)
 {
   if (!minh) return;
-  del_heap64 (minh->sketch);
+  del_heap_hash64 (minh->sketch);
   del_kmerhash (minh->kmer);
   free (minh);
 }
 
 void // void is to allow for overloading (function pointers)
-heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash)
+heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash, size_t location)
 {
-  heap64_insert (minh->sketch, hash);
+  struct hpq_item_struct item = {.v=NULL, .id = (int) location, .freq = 1, .hash = hash};
+  heap_hash64_insert (minh->sketch, item);
 }
 
 void
 heap_minhash_sketch_finalise (heap_minhash_sketch minh)
 {
-  heap64_finalise_heap_qsort (minh->sketch);
+  heap_hash64_finalise_heap_qsort (minh->sketch);
 }
 
-double
-heap_minhash_sketch_distance (heap_minhash_sketch mh1, heap_minhash_sketch mh2, int idx_in_kmer_params)
+void
+heap_minhash_sketch_distance (heap_minhash_sketch mh1, heap_minhash_sketch mh2, int idx_in_kmer_params, double *w_dist, double *u_dist)
 {
-  int j1, j2, n1, n2, common = 0, compared = 0;
-  uint64_t *h1, *h2;
-  double r;
+  int j1, j2, n1, n2, common = 0, compared = 0, cosine = 0;
+  hpq_item *h1, *h2;
+  double r_u, r_w;
 
   if (mh1->sketch->heap_size != mh2->sketch->heap_size) 
     biomcmc_error ("Distinct size sketches: comparable in theory but more likely a programmer mistake");
 
-  h1 = mh1->sketch->hash;    n1 = mh1->sketch->n;
-  h2 = mh2->sketch->hash;    n2 = mh2->sketch->n;
+  h1 = mh1->sketch->item; n1 = mh1->sketch->n;
+  h2 = mh2->sketch->item; n2 = mh2->sketch->n;
   for (j1 = j2 = 0; (j1 < n1) && (j2 < n2) && compared < mh1->sketch->heap_size; compared++) { // both are in decreasing order
-    if      (h1[j1] > h2[j2]) j1++; 
-    else if (h1[j1] < h2[j2]) j2++; 
-    else { common++; j1++; j2++; } // same hash in both
+    if      (h1[j1]->hash > h2[j2]->hash) j1++; 
+    else if (h1[j1]->hash < h2[j2]->hash) j2++; 
+    else { cosine += (h1[j1]->freq * h2[j2]->freq); common++; j1++; j2++; } // same hash in both
   }
   if (compared < mh1->sketch->heap_size) compared += (n1 - j1 + n2 - j2); // try to complete the union operation (following Mash)
   if (compared > mh1->sketch->heap_size) compared = mh1->sketch_size;
-  if (common == compared) return  0.;
-  if (common == 0) return 1.;
-  r = (double) (common) / (double) (compared);
-  return -log (2. * r/(1. + r)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
+  if (common == compared) *u_dist = 0.;
+  if (common == 0) *u_dist = 1.;
+  r_u = (double) (common) / (double) (compared); // unweighted (Jaccard similarity)
+  *u_dist = -log (2. * r_u/(1. + r_u)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
+  r_w = (double)(cosine) / (mh1->sketch->sqrt_sum * mh2->sketch->sqrt_sum); // cosine similarity (cannot be < 0 since we use freq)
+  *w_dist = -log (2. * r_w/(1. + r_w)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
 }
 
 bbit_minhash_sketch

@@ -16,8 +16,6 @@ sketch_distance_gen
 new_sketch_distance_gen_from_file (char *filename, kmerhash kmer, int heap_mh_size, int bbit_mh_bits)
 { 
   int i;
-  gzFile fp;
-  kseq_t *seq;
   size_t nchars;
   clock_t time0, time1;
   sketch_distance_gen sd = (sketch_distance_gen) biomcmc_malloc (sizeof (struct sketch_distance_gen_struct));
@@ -29,8 +27,8 @@ new_sketch_distance_gen_from_file (char *filename, kmerhash kmer, int heap_mh_si
   sd->n_samples = 0;
   sd->seqname = new_char_vector (1);
 
-  fp = gzopen(filename, "r");
-  seq = kseq_init(fp);
+  gzFile fp = gzopen(filename, "r");
+  kseq_t *seq = kseq_init(fp);
   time0 = clock ();
   while ((i = kseq_read(seq)) >= 0) {
     sd->n_samples++;
@@ -78,8 +76,8 @@ del_sketch_distance_gen (sketch_distance_gen sd)
 
 distance_generator
 new_distance_generator_from_sketch_set (sketch_distance_gen sd)
-{
-  distance_generator dg = new_distance_generator (sd->n_samples, sd->sset_zero->n_distances); 
+{ // distance_generator has more distances than sset->n_distances since we are testing weighted/unweighted minhash dists
+  distance_generator dg = new_distance_generator (sd->n_samples, sd->sset_zero->n_distances + sd->sset_zero->n_heap_mh); 
   distance_generator_set_function_data (dg, &sketch_distance_gen_wrapper, (void*) sd); // sd will have extra data needed to calc distances
   sd->generator = dg; dg->ref_counter++;
   return dg;
@@ -108,9 +106,9 @@ sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *resul
   sketch_set_compare (sd->sset[sample1], sd->sset[sample2]); // will store distances in its own vector
   time1 = clock (); sd->secs_distances += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); 
 
-  for (k = 0; k < sd->generator->n_distances; k++) result[k] = sd->sset[sample1]->dist[k]; // we hope distance_generator calling is same as sd->generator...
+  for (k = 0; k < sd->sset_zero->n_distances; k++) result[k] = sd->sset[sample1]->dist[k]; // we hope distance_generator calling is same as sd->generator...
+  for (int j = 0; j < sd->sset_zero->n_heap_mh; j++) result[k + j] = sd->sset[sample2]->dist[j]; // sample1 has weighted and sample2 has unweighted distances 
   return;
 }
-
 
 

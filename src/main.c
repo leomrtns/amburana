@@ -37,7 +37,7 @@ get_parameters_from_argv (int argc, char **argv)
   void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.minsamp, params.epsilon, params.link, params.end};
   params.argtable = argtable; 
   params.sketch->ival[0] = 256; // default (must be before parsing)
-  params.nbits->ival[0] = 10; // default (must be before parsing)
+  params.nbits->ival[0] = 10;   // default (must be before parsing)
   params.kmerset->ival[0] = 3;
   params.minsamp->ival[0] = 2;
   params.epsilon->dval[0] = 1.;
