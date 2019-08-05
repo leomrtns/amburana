@@ -127,6 +127,7 @@ void // void is to allow for overloading (function pointers)
 heap_minhash_sketch_insert (heap_minhash_sketch minh, uint64_t hash, size_t location)
 {
   hpq_item item = {.id = (int) location, .freq = 1, .hash = hash};
+  if (!hash) printf ("DEBUG %lu ", location);
   heap_hash64_insert (minh->sketch, item);
 }
 

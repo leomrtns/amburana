@@ -217,8 +217,7 @@ heap_hash64_finalise_heap_qsort (heap_hash64 pq)
 //    pq->heap_size = pq->n;
 //  }
   int sqrt_sum = 0;
-  for (int i = 1; i < pq->n; i++) printf ("%d ", (pq->item[i-1].hash > pq->item[i].hash) ? 1:0); 
-  printf ("    DEBUG\n");
+  printf ("%lu \t %4d %5d %5d %4d \n", pq->item[0].hash, pq->item[0].id, pq->item[0].freq, pq->item[1].freq, pq->n); 
   for (int i = 0; i < pq->n; i++) sqrt_sum += (pq->item[i].freq * pq->item[i].freq);
   pq->sqrt_sum = sqrt ((double)(sqrt_sum));
 }
