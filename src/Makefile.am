@@ -3,7 +3,7 @@ LDADD = $(GTKDEPS_LIBS)  @ZLIB_LIBS@ ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFL
 AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@  @ZLIB_CFLAGS@
 
 common_headers = amburana.h simple_heap.h general_heap.h minhash.h sketch_distance.h clustering_affineprop.h \
-                 clustering_hierarchical.h
+                 clustering_hierarchical.h kseq.h
 common_src     = simple_heap.c minhash.c sketch_distance.c clustering_affineprop.c \
                  clustering_hierarchical.c
 

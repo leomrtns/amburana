@@ -1,7 +1,6 @@
 AM_CPPFLAGS = $(GTKDEPS_CFLAGS) -I$(srcdir)/../src -I$(srcdir)/../@BIOMCMCLIB@/lib @OPENMP_CPPFLAGS@ -DTEST_FILE_DIR='"$(srcdir)/files/"'
-LDADD = $(GTKDEPS_LIBS)  @CHECK_LIBS@   ../src/libamburana.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
-
-AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@  @CHECK_CFLAGS@
+LDADD = $(GTKDEPS_LIBS) @ZLIB_LIBS@  @CHECK_LIBS@   ../src/libamburana.la ../biomcmc-lib/lib/libbiomcmc.la  $(AM_LDFLAGS)
+AM_CFLAGS = @AM_CFLAGS@  @OPENMP_CFLAGS@  @CHECK_CFLAGS@  @ZLIB_CFLAGS@
 
 EXTRA_DIST = files # directory with fasta etc files (accessed with #define TEST_FILE_DIR above)
 LIST_OF_TEST_PROGS= check_unit check_simpleheap debug_pairwise_dists debug_gopt_affine debug_hierarch_goptics

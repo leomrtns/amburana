@@ -206,6 +206,7 @@ hierarchical_cluster_topology (distance_generator dg, const char *linkage)
   
   update_topology_sisters (tree);
   update_topology_traversal (tree);
+  correct_negative_branch_lengths_from_topology (tree, tree->blength); 
   del_hierarchical_cluster (hac);
   return tree;
 }

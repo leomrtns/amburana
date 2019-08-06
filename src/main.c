@@ -83,7 +83,7 @@ print_usage (arg_parameters params, char *progname)
   arg_print_glossary(stdout, params.argtable,"  %-32s %s\n");
   if (params.help->count) {
     printf ("The choices for the sets of kmers are:\n");
-    for (i=0;i<5;i++) printf ("%d\t for %s analysis\n", i, biomcmc_kmer_class_string[i]);
+    for (i=0;i<6;i++) printf ("%d\t for %s analysis\n", i, biomcmc_kmer_class_string[i]);
     printf ("The choices for the hierarchical clustering are:\n");
     for (i=0;i<6;i++) printf ("%d\t for %s linkage\n", i, biomcmc_hierarchical_linkage_string[i]);
   }

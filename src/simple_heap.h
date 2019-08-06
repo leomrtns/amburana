@@ -23,14 +23,13 @@ struct heap64_struct {
 };
 
 typedef struct {
-  int id, freq;
+  int id0, id, freq; // id0 is the first location where it is found, id is the last location 
   uint64_t hash; 
 } hpq_item;
 
 struct heap_hash64_struct {
   hpq_item *item; 
   int heap_size, n;
-  double sqrt_sum;  // used in cosine distance calculation
 };
 
 heap64 new_heap64 (int heap_size);

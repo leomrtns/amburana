@@ -76,8 +76,8 @@ del_sketch_distance_gen (sketch_distance_gen sd)
 
 distance_generator
 new_distance_generator_from_sketch_set (sketch_distance_gen sd)
-{ // distance_generator has more distances than sset->n_distances since we are testing weighted/unweighted minhash dists
-  distance_generator dg = new_distance_generator (sd->n_samples, sd->sset_zero->n_distances + sd->sset_zero->n_heap_mh); 
+{ // distance_generator has twice sset->n_distances since for each we have weighted/unweighted minhash dists
+  distance_generator dg = new_distance_generator (sd->n_samples, 2 * sd->sset_zero->n_distances); 
   distance_generator_set_function_data (dg, &sketch_distance_gen_wrapper, (void*) sd); // sd will have extra data needed to calc distances
   sd->generator = dg; dg->ref_counter++;
   return dg;
@@ -86,7 +86,7 @@ new_distance_generator_from_sketch_set (sketch_distance_gen sd)
 void
 sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *result)
 {
-  int k;
+  int k,j;
   clock_t time0, time1;
   sketch_distance_gen sd = (sketch_distance_gen) data;
   /* we only extract kmer set when distance is needed for the first time */
@@ -106,10 +106,8 @@ sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *resul
   sketch_set_compare (sd->sset[sample1], sd->sset[sample2]); // will store distances in its own vector
   time1 = clock (); sd->secs_distances += (double)(time1-time0)/(double)(CLOCKS_PER_SEC); 
 
-  for (k = 0; k < sd->sset_zero->n_distances; k++) result[k] = sd->sset[sample1]->dist[k]; // we hope distance_generator calling is same as sd->generator...
-  for (int j = 0; j < sd->sset_zero->n_heap_mh; j++) result[k + j] = sd->sset[sample2]->dist[j]; // sample1 has weighted and sample2 has unweighted distances 
-  //for (k = 0; k < sd->generator->n_distances; k++) printf ("%9lf ", result[k]);
-  //printf ("::DEBUG:: %3d %3d\n", sample1, sample2);
+  for (k = 0; k < sd->sset_zero->n_distances; k++)      result[k] = sd->sset[sample1]->dist[k]; // we hope distance_generator calling is same as sd->generator...
+  for (j = 0; j < sd->sset_zero->n_distances; j++, k++) result[k] = sd->sset[sample2]->dist[j]; // sample1 has weighted and sample2 has unweighted distances 
   return;
 }
 

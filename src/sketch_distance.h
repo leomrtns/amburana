@@ -12,6 +12,7 @@
 #ifndef _amburana_sketch_distance_h_
 #define _amburana_sketch_distance_h_
 
+#include <zlib.h>
 #include "minhash.h" 
 
 typedef struct sketch_distance_gen_struct* sketch_distance_gen;

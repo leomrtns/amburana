@@ -116,7 +116,7 @@ new_heap_hash64 (int heap_size)
   pq->n = 0;
   pq->heap_size = (heap_size < 2 ? 2: heap_size);
   pq->item = (hpq_item*) biomcmc_malloc ((pq->heap_size + 1) * sizeof (hpq_item));
-  for (i = 0; i < pq->heap_size + 1; i++) { pq->item[i].freq = pq->item[i].id = 0; pq->item[i].hash = 0ULL; }
+  for (i = 0; i < pq->heap_size + 1; i++) { pq->item[i].freq = pq->item[i].id0 = pq->item[i].id = 0; pq->item[i].hash = 0ULL; }
   return pq;
 }
 
@@ -135,7 +135,7 @@ hpq_item
 heap_hash64_remove_maximum (heap_hash64 pq) // a.k.a. pop() 
 {
   hpq_item max = pq->item[1]; //the root is the maximum element
-  if (pq->n == 0) return (hpq_item) {0,0,0};
+  if (pq->n == 0) return (hpq_item) {0,0,0,0};
   pq->item[1] = pq->item[pq->n]; // replace the element at the top with last element in the heap
   pq->n--; 
   heap_hash64_bubble_down (pq, 1);
@@ -148,6 +148,7 @@ heap_hash64_insert (heap_hash64 pq, hpq_item item) // struct, not a pointer
   if (heap_hash64_item_already_here (pq, item, 1)) return; // if exists, then increase count  
   if (pq->n == pq->heap_size) { // replace if smaller than maximum
     if (item.hash < pq->item[1].hash) { 
+      pq->item[1].id0  = item.id0; // id0 never changes, but id is updated with most recent location
       pq->item[1].id   = item.id; 
       pq->item[1].freq = item.freq;
       pq->item[1].hash = item.hash;
@@ -156,6 +157,7 @@ heap_hash64_insert (heap_hash64 pq, hpq_item item) // struct, not a pointer
   }
   else { // regular insert (a.k.a. push)
     pq->n++;
+    pq->item[pq->n].id0  = item.id0; 
     pq->item[pq->n].id   = item.id;
     pq->item[pq->n].freq = item.freq; // should be one
     pq->item[pq->n].hash = item.hash;
@@ -166,9 +168,10 @@ heap_hash64_insert (heap_hash64 pq, hpq_item item) // struct, not a pointer
 static bool
 heap_hash64_item_already_here (heap_hash64 pq, hpq_item item, int p)
 { // must traverse both children since MaxHeap is not ordered like BST
+  return false;
   if (p > pq->n) return false; // it can be equal, since we have one extra element (item[1...n] )
-  if (item.hash == pq->item[p].hash) { pq->item[p].freq++; return true; }
-  if (item.hash  > pq->item[p].hash) return false;
+  if (item.hash == pq->item[p].hash) { pq->item[p].id = item.id; pq->item[p].freq += item.freq; return true; }
+  if (item.hash > pq->item[p].hash) return false; /* above, notice that only id is updated (id0 is leftmost location) */
   bool below = heap_hash64_item_already_here (pq, item, 2 * p); // 'left' child 
   if (!below) below = heap_hash64_item_already_here (pq, item, 2 * p + 1); // traverse right child if not found yet
   return below;
@@ -208,17 +211,11 @@ void
 heap_hash64_finalise_heap_qsort (heap_hash64 pq)
 {
   hpq_item tmp = pq->item[0];  pq->item[0] = pq->item[pq->n];  pq->item[pq->n] = tmp;   // heap goes from [1...n] and we want [0...n-1]
-//  for (int i=pq->n-4;i<pq->n-1;i++) printf ("%20lu %6d %3d > ", pq->item[i].hash, pq->item[i].id, pq->item[i].freq);
   qsort (pq->item, pq->n, sizeof (hpq_item), compare_hpq_item_increasing);
-//  for (int i=pq->n-4;i<pq->n-1;i++) printf (" < %20lu %6d %3d", pq->item[i].hash, pq->item[i].id, pq->item[i].freq);
-//  printf (":: DEBUG\n");
   if (pq->n < pq->heap_size - 1) { 
     pq->item = (hpq_item*) biomcmc_realloc ((hpq_item*) pq->item, pq->n * sizeof (hpq_item));
     pq->heap_size = pq->n; 
   }
-  int sqrt_sum = 0;
-  for (int i = 0; i < pq->n; i++) sqrt_sum += (pq->item[i].freq * pq->item[i].freq);
-  pq->sqrt_sum = sqrt ((double)(sqrt_sum));
 }
 
 static int

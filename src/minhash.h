@@ -33,13 +33,15 @@ struct heap_minhash_sketch_struct
 {
   int sketch_size;
   heap_hash64 sketch;
-  kmerhash kmer; // we need some constants defined here (kmer sizes)
+  double sqrt_sum; // cosine similarity
+  kmerhash kmer;   // we need some constants defined here (kmer sizes)
 };
 
 struct bbit_minhash_sketch_struct
 { 
-  int sketch_size, n_bits;
+  int sketch_size, n_bits, *freq;
   uint64_t suffix_mask, *sketch; // each vector will have the min value over all from bin
+  double sqrt_sum; // used in cosine similarity
   kmerhash kmer;
 };
 /*! \brief do not allocate vectors, just set sizes. Usefull if other functions need to know them */
