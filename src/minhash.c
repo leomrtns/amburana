@@ -149,19 +149,27 @@ heap_minhash_sketch_distance (heap_minhash_sketch mh1, heap_minhash_sketch mh2, 
 
   h1 = mh1->sketch->item; n1 = mh1->sketch->n;
   h2 = mh2->sketch->item; n2 = mh2->sketch->n;
-  for (j1 = j2 = 0; (j1 < n1) && (j2 < n2) && compared < mh1->sketch->heap_size; compared++) { // both are in decreasing order
+  for (j1 = j2 = 0; (j1 < n1) && (j2 < n2) && compared < 2 * mh1->sketch->heap_size; compared++) { // both are in decreasing order
     if      (h1[j1].hash > h2[j2].hash) j1++; 
     else if (h1[j1].hash < h2[j2].hash) j2++; 
-    else { cosine += (h1[j1].freq * h2[j2].freq); common++; j1++; j2++; } // same hash in both
+    else { cosine += (h1[j1].freq * h2[j2].freq); common++; j1++; j2++;} // same hash in both
   }
   if (compared < mh1->sketch->heap_size) compared += (n1 - j1 + n2 - j2); // try to complete the union operation (following Mash)
-  if (compared > mh1->sketch->heap_size) compared = mh1->sketch_size;
+  //if (compared > mh1->sketch->heap_size) compared = mh1->sketch_size;
   if (common == compared) *u_dist = 0.;
-  if (common == 0) *u_dist = 1.;
-  r_u = (double) (common) / (double) (compared); // unweighted (Jaccard similarity)
-  *u_dist = -log (2. * r_u/(1. + r_u)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
-  r_w = (double)(cosine) / (mh1->sketch->sqrt_sum * mh2->sketch->sqrt_sum); // cosine similarity (cannot be < 0 since we use freq)
-  *w_dist = -log (2. * r_w/(1. + r_w)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
+  else if (common == 0) *u_dist = 1.;
+  else {
+    r_u = (double) (common) / (double) (compared); // unweighted (Jaccard similarity)
+    *u_dist = -log (2. * r_u/(1. + r_u)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
+  }
+
+  if (cosine == 0) *w_dist = 1.;
+  else {
+    assert (mh1->sketch->sqrt_sum); assert (mh2->sketch->sqrt_sum);
+    r_w = (double)(cosine) / (mh1->sketch->sqrt_sum * mh2->sketch->sqrt_sum); // cosine similarity (cannot be < 0 since we use freq)
+    if (r_w + 1.e-12 > 1.) *w_dist = 0.;
+    else *w_dist = -log (2. * r_w/(1. + r_w)) / (double) (mh1->kmer->p->size[idx_in_kmer_params]);
+  }
 }
 
 bbit_minhash_sketch

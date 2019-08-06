@@ -25,7 +25,7 @@ struct heap64_struct {
 typedef struct {
   int id, freq;
   uint64_t hash; 
-} hpq_item ;
+} hpq_item;
 
 struct heap_hash64_struct {
   hpq_item *item; 

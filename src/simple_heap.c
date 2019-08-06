@@ -43,7 +43,6 @@ heap64_remove_maximum (heap64 h64) // a.k.a. pop()
   return max;
 }
 
-// FIXME: cannot replace, must first check if already existing in heap 
 void 
 heap64_insert (heap64 h64, uint64_t h) 
 {
@@ -209,15 +208,15 @@ void
 heap_hash64_finalise_heap_qsort (heap_hash64 pq)
 {
   hpq_item tmp = pq->item[0];  pq->item[0] = pq->item[pq->n];  pq->item[pq->n] = tmp;   // heap goes from [1...n] and we want [0...n-1]
+//  for (int i=pq->n-4;i<pq->n-1;i++) printf ("%20lu %6d %3d > ", pq->item[i].hash, pq->item[i].id, pq->item[i].freq);
   qsort (pq->item, pq->n, sizeof (hpq_item), compare_hpq_item_increasing);
-//  if (pq->n < pq->heap_size - 1) {
-//    printf ("DEBUG::old %d new %d\n", pq->heap_size, pq->n);
-//    for (int i = pq->heap_size; i >= pq->n; i--) if (pq->item[i]) free (pq->item[i]);
-//    pq->item = (hpq_item*) biomcmc_realloc ((hpq_item*) pq->item, pq->n * sizeof (hpq_item));
-//    pq->heap_size = pq->n;
-//  }
+//  for (int i=pq->n-4;i<pq->n-1;i++) printf (" < %20lu %6d %3d", pq->item[i].hash, pq->item[i].id, pq->item[i].freq);
+//  printf (":: DEBUG\n");
+  if (pq->n < pq->heap_size - 1) { 
+    pq->item = (hpq_item*) biomcmc_realloc ((hpq_item*) pq->item, pq->n * sizeof (hpq_item));
+    pq->heap_size = pq->n; 
+  }
   int sqrt_sum = 0;
-  printf ("%lu \t %4d %5d %5d %4d \n", pq->item[0].hash, pq->item[0].id, pq->item[0].freq, pq->item[1].freq, pq->n); 
   for (int i = 0; i < pq->n; i++) sqrt_sum += (pq->item[i].freq * pq->item[i].freq);
   pq->sqrt_sum = sqrt ((double)(sqrt_sum));
 }

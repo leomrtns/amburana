@@ -108,6 +108,8 @@ sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *resul
 
   for (k = 0; k < sd->sset_zero->n_distances; k++) result[k] = sd->sset[sample1]->dist[k]; // we hope distance_generator calling is same as sd->generator...
   for (int j = 0; j < sd->sset_zero->n_heap_mh; j++) result[k + j] = sd->sset[sample2]->dist[j]; // sample1 has weighted and sample2 has unweighted distances 
+  //for (k = 0; k < sd->generator->n_distances; k++) printf ("%9lf ", result[k]);
+  //printf ("::DEBUG:: %3d %3d\n", sample1, sample2);
   return;
 }
 
