@@ -1,7 +1,10 @@
+2019.08.07
+	* idea: try rolling hash (rsync uses a rolling version of Adler32). canonical comparison can be done on hash value?
+	* idea: LSH can be made with masked sites 
 2019.08.01
 	* BUG: MinHash is based on maxheap, which is bugged: if an element X is smaller than Max and heap is full, we cannot
 	automatically replace Max, b/c X may be _equal_ to existing minhash element. (I.e. true minhash is set of distinct
-	elements)
+	elements) FIXED on 2019.08.06
 2019.07.26
 	* TODO: implement bioNJ with distance_generator(); compare my two UPGMA implementations; refactor fasta reading.
 2019.07.25
