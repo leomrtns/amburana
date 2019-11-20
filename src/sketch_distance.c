@@ -7,7 +7,6 @@
  */
 
 #include "sketch_distance.h"
-#include "kseq.h"
 KSEQ_INIT(gzFile, gzread)
 
 void sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *result);
