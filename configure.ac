@@ -35,6 +35,7 @@ AC_SUBST(OPENMP_CPPFLAGS)
 dnl unit tests in for "make check"
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.10])
 PKG_CHECK_MODULES([ZLIB], [zlib])
+#PKG_CHECK_MODULES([OPENMP], [openmp])
 
 dnl library checks (math etc.) are done by biomcmc-lib
 AC_MSG_RESULT([                ===    configuration options specific to amburana])

@@ -12,7 +12,6 @@
 #ifndef _amburana_sketch_distance_h_
 #define _amburana_sketch_distance_h_
 
-//#include <zlib.h>
 #include "kseq.h"
 #include "minhash.h" 
 

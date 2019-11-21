@@ -1,4 +1,5 @@
 #include <amburana.h>
+#include <zlib.h>
 
 typedef struct
 {
