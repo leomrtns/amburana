@@ -107,7 +107,7 @@ new_hierarchical_cluster (distance_generator dg, char linkage)
   hc_cluster_init_zero (hac->clusters, dg->n_samples);
   curr = hac->clusters;
 
-  for (length = 0; (curr = curr->next); length++) total += length;
+  total = dg->n_samples * (dg->n_samples - 1) / 2; // for (length = 0; (curr = curr->next); length++) total += length;
   hac->links  = (hc_link_t*) biomcmc_malloc (total * sizeof(hc_link_t));
   hac->levels = (hc_level_t*) biomcmc_malloc (hac->d->n_samples * sizeof (hc_level_t));
 
