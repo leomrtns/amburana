@@ -1,8 +1,12 @@
-# Amburana &mdash; experimental functions
+![Amburana](recipe/amburana.png)
 
-The idea is to test some functions I am implementing for count-min sketches, k-mer-based etc. 
+Amburana generates sketches of genomic sequences using weighted and unweighted minhash signatures, and calculates
+distance matrices using several pre-determined sets of k-mer sizes. 
+It also implements several clustering algorithms which are used in these pairwise distance matrices. 
+The algorithms implemented include hierarchical clustering (UPGMA, WPGMA, median, etc.), OPTICS, and affinity
+propagation.
 
-*Amburana* is a genus of endangered South American trees which are used in the confection of cachaça casks.
+*Amburana* is a genus of endangered South American trees which are used in the production of cachaça casks.
 ## License 
 Copyright (C) 2019-today  [Leonardo de Oliveira Martins](https://github.com/leomrtns)
 
