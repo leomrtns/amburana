@@ -203,6 +203,7 @@ hierarchical_cluster_topology (distance_generator dg, const char *linkage)
     tree->nodelist[i]->right = tree->nodelist[ level->target_id ];
     tree->nodelist[i]->right->up = tree->nodelist[i]->left->up = tree->nodelist[i];
   }
+  tree->root = tree->nodelist[i];
   
   update_topology_sisters (tree);
   update_topology_traversal (tree);
