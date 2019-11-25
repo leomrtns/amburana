@@ -107,7 +107,8 @@ new_hierarchical_cluster (distance_generator dg, char linkage)
   hc_cluster_init_zero (hac->clusters, dg->n_samples);
   curr = hac->clusters;
 
-  total = dg->n_samples * (dg->n_samples - 1) / 2; // for (length = 0; (curr = curr->next); length++) total += length;
+  for (length = 0; (curr = curr->next); length++); // upates length only (see original below) 
+  total = dg->n_samples * (dg->n_samples - 1) / 2; // original was:  for (length = 0; (curr = curr->next); length++) total += length; 
   hac->links  = (hc_link_t*) biomcmc_malloc (total * sizeof(hc_link_t));
   hac->levels = (hc_level_t*) biomcmc_malloc (hac->d->n_samples * sizeof (hc_level_t));
 
@@ -192,19 +193,18 @@ hierarchical_cluster_topology (distance_generator dg, const char *linkage)
     tree->blength[level->target_id] = (level->linkage  - tree->blength[level->target_id])/2.;
     (&cluster[s_i])->final_level = level->id; // leaves "climb up" the tree, so that the store ID of current LCA 
     (&cluster[t_i])->final_level = level->id; 
-    //printf("DEBUG 2 :: %2d %2d    %2d  %8.5lf\n", level->source_id, level->target_id, level->id,  level->linkage);
+    // printf("DEBUG 2 :: %2d %2d    %2d  %8.5lf\n", level->source_id, level->target_id, level->id,  level->linkage);
   }
 
   tree->blength[2*n-2] = 0.;  // still has overall distance
   /* topology just needs to updates pointers up, right, and left (sisters are updated later) */
   for (level = hac->levels; level; level = level->next) { // for each internal node
     i = level->id;
+    // printf("DEBUG:: %3d: %3d %3d\n", i, level->source_id, level->target_id);
     tree->nodelist[i]->left  = tree->nodelist[ level->source_id ];
     tree->nodelist[i]->right = tree->nodelist[ level->target_id ];
     tree->nodelist[i]->right->up = tree->nodelist[i]->left->up = tree->nodelist[i];
   }
-  tree->root = tree->nodelist[i];
-  
   update_topology_sisters (tree);
   update_topology_traversal (tree);
   correct_negative_branch_lengths_from_topology (tree, tree->blength); 
