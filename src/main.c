@@ -5,6 +5,7 @@ typedef struct
   struct arg_lit  *help;
   struct arg_lit  *version;
   struct arg_file *fasta;
+  struct arg_lit  *unique;
   struct arg_int  *sketch;
   struct arg_int  *nbits;
   struct arg_int  *kmerset;
@@ -23,9 +24,10 @@ arg_parameters
 get_parameters_from_argv (int argc, char **argv)
 {
   arg_parameters params = {
-    .help    = arg_litn("h","help",0, 1, "print a longer help and exit"),
+    .help    = arg_litn("h","help",0, 1, "print a more detailed help and exit"),
     .version = arg_litn("v","version",0, 1, "print version and exit"),
     .fasta   = arg_filen(NULL, NULL, NULL, 1, 1, "fasta file"),
+    .unique  = arg_litn("u", "unique",0, 1, "output a single clustering with uniqueness of sequences"),
     .sketch  = arg_int0("s", "size", "<n>", "sketch size for minhash"),
     .nbits   = arg_int0("b", "bits", "<n>", "number of bits for suffix of one-permutation minhash"),
     .kmerset = arg_int0("k", "kmer", "{0...4}", "code for set of kmers"),
@@ -34,7 +36,8 @@ get_parameters_from_argv (int argc, char **argv)
     .link    = arg_int0("l", "linkage", "{0...6}", "hierarchical clustering agglomerative function"),
     .end     = arg_end(10) // max number of errors it can store (o.w. shows "too many errors")
   };
-  void* argtable[] = {params.help, params.version, params.fasta, params.sketch, params.nbits, params.kmerset, params.minsamp, params.epsilon, params.link, params.end};
+  void* argtable[] = {params.help, params.version, params.fasta, params.unique, params.sketch, params.nbits, 
+                      params.kmerset, params.minsamp, params.epsilon, params.link, params.end};
   params.argtable = argtable; 
   params.sketch->ival[0] = 256; // default (must be before parsing)
   params.nbits->ival[0] = 10;   // default (must be before parsing)
@@ -55,6 +58,7 @@ del_arg_parameters (arg_parameters params)
   if (params.help) free (params.help);
   if (params.version) free (params.version);
   if (params.fasta) free (params.fasta);
+  if (params.unique) free (params.unique);
   if (params.sketch) free (params.sketch);
   if (params.nbits) free (params.nbits);
   if (params.kmerset) free (params.kmerset);
@@ -77,7 +81,10 @@ print_usage (arg_parameters params, char *progname)
   }
 
   printf ("%s \n", PACKAGE_STRING);
-  printf ("Just testing at the moment. Move along, nothing to see here!\n");
+  printf ("This software is still experimental, it may change without notice.\n");
+  printf ("The idea is to compare the k-mer composition of sequences and cluster them accordingly.\n");
+  printf ("Currently it calculates shorter kmer distances with simple minhash and longer with b-bit minhash.\n");
+  printf ("In both cases it calculates first unweighted (presence/absence of kmer) and then weighted (histograms)\n");
   printf ("The complete syntax is:\n\n %s ", basename(progname));
   arg_print_syntaxv (stdout, params.argtable, "\n\n");
   arg_print_glossary(stdout, params.argtable,"  %-32s %s\n");
@@ -86,6 +93,8 @@ print_usage (arg_parameters params, char *progname)
     for (i=0;i<6;i++) printf ("%d\t for %s analysis\n", i, biomcmc_kmer_class_string[i]);
     printf ("The choices for the hierarchical clustering are:\n");
     for (i=0;i<6;i++) printf ("%d\t for %s linkage\n", i, biomcmc_hierarchical_linkage_string[i]);
+  printf ("The 'unique' option is to rescale all distance matrices, and each new pairwise distance will be the maximum over them.\n");
+  printf ("If two sequences are identical all their distances are zero. Useful to trim large data sets before aligning them.\n");
   }
   del_arg_parameters (params); exit (EXIT_SUCCESS);
 }

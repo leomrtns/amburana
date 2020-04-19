@@ -110,4 +110,3 @@ sketch_distance_gen_wrapper (void *data, int sample1, int sample2, double *resul
   return;
 }
 
-
