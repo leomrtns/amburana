@@ -168,7 +168,7 @@ heap_hash64_insert (heap_hash64 pq, hpq_item item) // struct, not a pointer
 static bool
 heap_hash64_item_already_here (heap_hash64 pq, hpq_item item, int p)
 { // must traverse both children since MaxHeap is not ordered like BST
-  return false;
+  return false; // note from 2022.03.15: unfinished idea is to increase count (histsketch) but currently we discard this info (if item is already here)
   if (p > pq->n) return false; // it can be equal, since we have one extra element (item[1...n] )
   if (item.hash == pq->item[p].hash) { pq->item[p].id = item.id; pq->item[p].freq += item.freq; return true; }
   if (item.hash > pq->item[p].hash) return false; /* above, notice that only id is updated (id0 is leftmost location) */

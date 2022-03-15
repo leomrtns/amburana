@@ -16,7 +16,8 @@ static bool affineprop_update_iteration (affineprop_cluster ap, double lambda);
 affineprop_cluster
 new_affineprop_cluster (distance_generator dg)
 {
-  int i, time_seed[2];
+  int i;
+  int64_t time_seed[2];
   affineprop_cluster ap = (affineprop_cluster) biomcmc_malloc (sizeof (struct affineprop_cluster_struct));
   ap->d = dg; dg->ref_counter++;
   
